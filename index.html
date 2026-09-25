@@ -52,20 +52,18 @@
 </head>
 <body>
 
-    <!-- Authorization Gate -->
     <div id="auth-screen" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-zinc-900 px-4 text-center">
         <h1 class="text-2xl text-white font-semibold mb-4">AR Sensor Access</h1>
-        <p class="text-zinc-400 mb-8 max-w-sm">Camera, GPS, and device orientation permissions are required to place 3D models in the physical environment.</p>
+        <p class="text-zinc-400 mb-2 max-w-sm">Camera, GPS, and device orientation permissions are required.</p>
+        <p id="ssl-warning" class="text-red-400 text-sm mb-8 max-w-sm hidden">HTTPS is required for sensor access.</p>
         <button id="btn-authorize" class="pointer-events-auto px-6 py-3 bg-white text-black font-medium rounded-lg hover:bg-zinc-200 transition-colors">
             Enable Sensors
         </button>
     </div>
 
-    <!-- HUD Overlay -->
     <div id="hud-container">
         <div class="center-dot"></div>
 
-        <!-- Top Left: Telemetry -->
         <div class="absolute top-4 left-4 glass-panel p-3 rounded-lg text-xs sm:text-sm">
             <div class="mb-1 text-zinc-400 text-[10px] uppercase tracking-wider">Position</div>
             <div class="font-mono">LAT: <span id="hud-lat">--</span></div>
@@ -73,13 +71,11 @@
             <div class="font-mono mt-1 text-zinc-300">ACC: <span id="hud-acc">--</span> m</div>
         </div>
 
-        <!-- Top Right: Orientation -->
         <div class="absolute top-4 right-4 glass-panel p-3 rounded-lg text-xs sm:text-sm text-right">
             <div class="mb-1 text-zinc-400 text-[10px] uppercase tracking-wider">Heading</div>
             <div class="font-mono"><span id="hud-heading">--</span>°</div>
         </div>
 
-        <!-- Bottom Center: Target Data -->
         <div class="absolute bottom-6 left-1/2 transform -translate-x-1/2 glass-panel px-4 py-2 rounded-full text-sm flex gap-4">
             <div>Model: <span class="font-semibold text-white">Active</span></div>
             <div class="w-px bg-white/20"></div>
@@ -87,7 +83,6 @@
         </div>
     </div>
 
-    <!-- AR Scene -->
     <a-scene
         vr-mode-ui="enabled: false"
         embedded
@@ -96,7 +91,6 @@
         id="ar-scene">
         
         <a-assets>
-            <!-- Define the 3D model source here. Replace model.glb with your exact filename -->
             <a-asset-item id="custom-model" src="unroot/models/model.glb"></a-asset-item>
         </a-assets>
 
@@ -107,8 +101,8 @@
         const authScreen = document.getElementById('auth-screen');
         const btnAuthorize = document.getElementById('btn-authorize');
         const hudContainer = document.getElementById('hud-container');
-        const arScene = document.getElementById('ar-scene');
-
+        const sslWarning = document.getElementById('ssl-warning');
+        
         const hudLat = document.getElementById('hud-lat');
         const hudLon = document.getElementById('hud-lon');
         const hudAcc = document.getElementById('hud-acc');
@@ -117,6 +111,10 @@
 
         let targetEntityPlaced = false;
         let initialPosition = null;
+
+        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+            sslWarning.classList.remove('hidden');
+        }
 
         btnAuthorize.addEventListener('click', async () => {
             try {
@@ -166,7 +164,8 @@
             hudLon.innerText = lon.toFixed(6);
             hudAcc.innerText = acc ? acc.toFixed(1) : "--";
 
-            if (!targetEntityPlaced && acc < 50) {
+            // accuracy threshold raised to 1000m to bypass indoor/poor signal instantiation blocks
+            if (!targetEntityPlaced && acc < 1000) {
                 initialPosition = { lat, lon };
                 placeARModel(lat, lon);
                 targetEntityPlaced = true;
@@ -182,17 +181,16 @@
         }
 
         function placeARModel(userLat, userLon) {
-            // Places model approximately 11 meters North of initial GPS fix
-            const targetLat = userLat + 0.0001;
+            const targetLat = userLat + 0.0001; // ~11 meters North
             const targetLon = userLon;
 
             const scene = document.querySelector('a-scene');
-            
             const modelContainer = document.createElement('a-entity');
-            modelContainer.setAttribute('gps-entity-place', `latitude: ${targetLat}; longitude: ${targetLon};`);
             
-            // Adjust scale based on native model dimensions. Default is 1:1.
+            modelContainer.setAttribute('gps-entity-place', `latitude: ${targetLat}; longitude: ${targetLon};`);
             modelContainer.setAttribute('gltf-model', '#custom-model');
+            
+            // Adjust vector string if asset renders off-screen or out of viewport bounds
             modelContainer.setAttribute('scale', '1 1 1');
             modelContainer.setAttribute('position', '0 0 0');
 
