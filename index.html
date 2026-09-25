@@ -178,6 +178,7 @@
     const DEPLOYMENT_RADIUS_METERS = 15;
     
     let manualOverride = false;
+    let locationsInitialized = false;
 
     const fleetData = [
         {
@@ -186,8 +187,8 @@
             "crew": "Ground Ops Team A",
             "base": "Zone 1",
             "description": "High-capacity aircraft loader used for main deck cargo operations.",
-            "lat": 51.5072, 
-            "lng": -0.1276
+            "lat": 0, 
+            "lng": 0
         },
         {
             "name": "Ground Power Unit",
@@ -195,8 +196,8 @@
             "crew": "Maintenance Team 4",
             "base": "Zone 2",
             "description": "Mobile power unit providing 400Hz AC power to aircraft on the stand.",
-            "lat": 51.5075, 
-            "lng": -0.1279
+            "lat": 0, 
+            "lng": 0
         }
     ];
 
@@ -274,6 +275,15 @@
     function handlePositionUpdate(position) {
         const userLat = position.coords.latitude;
         const userLng = position.coords.longitude;
+
+        if (!locationsInitialized) {
+            fleetData[0].lat = userLat;
+            fleetData[0].lng = userLng;
+            fleetData[1].lat = userLat + 0.00005;
+            fleetData[1].lng = userLng + 0.00005;
+            locationsInitialized = true;
+            updateAsset(select.value); 
+        }
         
         let nearestDistance = Infinity;
         let nearestIndex = 0;
