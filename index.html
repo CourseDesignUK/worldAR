@@ -1,372 +1,347 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-<title>AR Spatial Viewer</title>
-<style>
-  :root {
-    --bg-primary: #1C1C1C;
-    --bg-surface: rgba(45, 45, 45, 0.85);
-    --color-action: #4B8E4D;
-    --color-accent: #7A9CDB;
-    --text-high: #E2E6F0;
-    --text-low: #4F4F4F;
-  }
-  body {
-    margin: 0;
-    overflow: hidden;
-    background-color: var(--bg-primary);
-    font-family: system-ui, -apple-system, sans-serif;
-    color: var(--text-high);
-    user-select: none;
-    -webkit-user-select: none;
-  }
-  canvas {
-    display: block;
-  }
-  #ui-layer {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    pointer-events: none;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    z-index: 10;
-  }
-  .status-pill {
-    background: var(--bg-surface);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    padding: 10px 20px;
-    border-radius: 24px;
-    margin: 24px auto;
-    font-size: 14px;
-    font-weight: 500;
-    pointer-events: auto;
-    letter-spacing: 0.5px;
-  }
-  .controls-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    padding: 24px 16px;
-    pointer-events: auto;
-    background: linear-gradient(to top, rgba(28,28,28,0.9) 0%, rgba(28,28,28,0) 100%);
-  }
-  .fab-container {
-    display: flex;
-    justify-content: flex-end;
-    gap: 16px;
-    padding-right: 8px;
-  }
-  .fab {
-    width: 56px;
-    height: 56px;
-    border-radius: 28px;
-    border: none;
-    background: var(--bg-surface);
-    color: var(--text-low);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    transition: all 0.2s ease;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-  }
-  .fab.active {
-    background: var(--color-accent);
-    color: var(--bg-primary);
-  }
-  .carousel {
-    display: flex;
-    gap: 16px;
-    overflow-x: auto;
-    padding: 20px;
-    background: var(--bg-surface);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-radius: 24px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-    scrollbar-width: none;
-  }
-  .carousel::-webkit-scrollbar {
-    display: none;
-  }
-  .model-card {
-    min-width: 72px;
-    height: 72px;
-    background: var(--bg-primary);
-    border-radius: 16px;
-    border: 2px solid var(--text-low);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: border-color 0.2s ease;
-    font-size: 12px;
-    color: var(--text-low);
-    font-weight: 600;
-  }
-  .model-card.selected {
-    border-color: var(--color-action);
-    color: var(--text-high);
-  }
-  #ARButton {
-    position: absolute !important;
-    bottom: 50% !important;
-    left: 50% !important;
-    transform: translate(-50%, 50%) !important;
-    background-color: var(--color-action) !important;
-    color: var(--text-high) !important;
-    border: none !important;
-    border-radius: 24px !important;
-    padding: 16px 32px !important;
-    font-weight: 600 !important;
-    font-family: inherit !important;
-    z-index: 20 !important;
-    opacity: 1 !important;
-  }
-</style>
-<script type="importmap">
-  {
-    "imports": {
-      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-    }
-  }
-</script>
+    <title>World AT</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+    
+    <style>
+        :root {
+            --app-bg: #1a1d23; 
+            --yun-orange: #ff6a00; 
+            --glass: rgba(255, 255, 255, 0.04);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --accent: #ff9d5c;
+            --alert: #ff3333;
+            --success: #00ff88;
+        }
+
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            overflow: hidden; background-color: var(--app-bg); 
+            font-family: 'Inter', -apple-system, sans-serif;
+            color: white;
+        }
+
+        #start-screen { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: radial-gradient(circle at center, #23272f 0%, #1a1d23 100%); 
+            z-index: 3000; display: flex; flex-direction: column; 
+            justify-content: center; align-items: center; 
+            transition: opacity 0.8s ease, visibility 0.8s; 
+        }
+
+        .radar-container {
+            position: relative; width: 200px; height: 200px;
+            display: flex; justify-content: center; align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .radar-sweep { 
+            position: absolute; width: 100%; height: 100%; border-radius: 50%;
+            background: conic-gradient(from -90deg at 50% 50%, transparent 270deg, rgba(255, 106, 0, 0.4) 360deg); 
+            animation: sweep 3s linear infinite; 
+        }
+        @keyframes sweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        .commence-btn { 
+            background: transparent; color: white; border: 1px solid var(--yun-orange); 
+            padding: 12px 30px; border-radius: 4px; cursor: pointer; 
+            font-weight: bold; letter-spacing: 2px; text-transform: uppercase;
+            z-index: 3001;
+        }
+
+        .app-overlay { 
+            position: absolute; top: env(safe-area-inset-top, 15px); 
+            left: 50%; transform: translateX(-50%); 
+            width: 94%; max-width: 500px; z-index: 100; 
+        }
+
+        .control-panel { 
+            background: var(--glass); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+            border: 1px solid var(--glass-border); padding: 10px 12px; border-radius: 12px; 
+            display: flex; justify-content: space-between; align-items: center; gap: 8px;
+        }
+
+        .telemetry-panel {
+            background: var(--glass); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+            border: 1px solid var(--glass-border); padding: 8px 12px; border-radius: 8px; 
+            margin-top: 10px; display: flex; justify-content: space-between;
+            font-size: 11px; font-family: monospace; color: var(--accent);
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+
+        .asset-info { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+        .panel-label { font-size: 8px; color: var(--accent); text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 2px; }
+
+        select { 
+            background: transparent; color: white; border: none; font-weight: bold; font-size: 13px; outline: none; cursor: pointer; width: 100%;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; opacity: 0.8;
+        }
+        
+        .button-group { display: flex; gap: 6px; flex-shrink: 0; }
+        .ui-btn { background: var(--glass-border); color: white; border: 1px solid transparent; padding: 8px 10px; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 10px; text-transform: uppercase; transition: 0.2s; white-space: nowrap; }
+        .ui-btn.active { background: var(--yun-orange); border-color: white; }
+        .ui-btn.primary { background: var(--yun-orange); }
+
+        .ar-container { position: absolute; bottom: env(safe-area-inset-bottom, 25px); left: 50%; transform: translateX(-50%); z-index: 150; }
+        
+        .ar-btn {
+            background: rgba(255,255,255,0.08); backdrop-filter: blur(10px); border: 1px solid var(--glass-border);
+            color: white; padding: 12px 24px; border-radius: 25px; font-size: 11px;
+            text-transform: uppercase; font-weight: bold; cursor: pointer;
+            transition: all 0.3s ease; opacity: 0.4; pointer-events: none;
+        }
+
+        .ar-btn.ready {
+            background: var(--success); border-color: white; color: black; opacity: 1; pointer-events: auto;
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.4);
+        }
+
+        .details-panel { 
+            position: fixed; top: 0; right: -100%; width: 100%; max-width: 350px; height: 100%; 
+            background: rgba(18, 20, 24, 0.98); backdrop-filter: blur(30px);
+            transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1); z-index: 2000; border-left: 1px solid var(--glass-border);
+        }
+        .details-panel.active { right: 0; }
+        .spec-content { padding: 60px 30px; }
+        .spec-item { margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; }
+
+        model-viewer { width: 100vw; height: 100vh; background: #1a1d23; }
+        .Hotspot { background: var(--yun-orange); border-radius: 50%; width: 14px; height: 14px; border: 2px solid white; cursor: pointer; transition: 0.3s; box-shadow: 0 0 10px rgba(255,106,0,0.5); }
+        .Hotspot.hidden { opacity: 0; transform: scale(0); pointer-events: none; }
+        .HotspotAnnotation { background: rgba(0, 0, 0, 0.85); color: white; padding: 5px 10px; border-radius: 4px; font-size: 10px; position: absolute; transform: translate(15px, -50%); border: 1px solid var(--yun-orange); white-space: nowrap; pointer-events: none; }
+    </style>
 </head>
 <body>
-<div id="ui-layer">
-  <div id="status" class="status-pill">Awaiting AR Session...</div>
-  <div class="controls-wrapper">
-    <div class="fab-container">
-      <button id="mode-manual" class="fab active">MANUAL</button>
-      <button id="mode-geo" class="fab">GEO</button>
+
+<div id="start-screen">
+    <div class="radar-container">
+        <div class="radar-sweep"></div>
+        <div style="z-index: 3002; background:var(--yun-orange); color:white; padding:6px 14px; font-weight:900; font-style:italic; border-radius:4px; font-size: 14px;">YUN</div>
     </div>
-    <div class="carousel">
-      <div class="model-card selected" data-model="cube">CUBE</div>
-      <div class="model-card" data-model="sphere">SPHERE</div>
-      <div class="model-card" data-model="cylinder">CYL</div>
-      <div class="model-card" data-model="tetra">TETRA</div>
-    </div>
-  </div>
+    <button class="commence-btn" onclick="initializeSystems()">Acquire Telemetry</button>
 </div>
 
-<script type="module">
-  import * as THREE from 'three';
-  import { ARButton } from 'three/addons/webxr/ARButton.js';
+<div class="app-overlay">
+    <div class="control-panel">
+        <div class="asset-info">
+            <div class="panel-label">Active Asset</div>
+            <select id="model-select"></select>
+        </div>
+        <div class="button-group">
+            <button id="toggle-hotspots" class="ui-btn active">Hotspots</button>
+            <button onclick="document.getElementById('details-panel').classList.add('active')" class="ui-btn primary">Specs</button>
+        </div>
+    </div>
+    <div class="telemetry-panel">
+        <span id="data-dist">DIST: N/A</span>
+        <span id="data-head">HDG: N/A</span>
+        <span id="data-status" style="color: var(--alert);">SEARCHING</span>
+    </div>
+</div>
 
-  let container;
-  let camera, scene, renderer;
-  let controller, reticle;
-  let hitTestSource = null;
-  let hitTestSourceRequested = false;
-  
-  let currentModel = 'cube';
-  let currentMode = 'manual';
-  let geoCoordinates = null;
-  let geoWatchId = null;
+<div class="ar-container">
+    <button id="ar-button" class="ar-btn">APPROACH ASSET TO DEPLOY</button>
+</div>
 
-  const statusUI = document.getElementById('status');
-  const uiLayer = document.getElementById('ui-layer');
+<div id="details-panel" class="details-panel">
+    <div class="spec-content">
+        <h2 id="asset-title" style="color: var(--yun-orange); font-weight: 300; text-transform: uppercase; margin-bottom:30px; font-size: 1.5rem;">-</h2>
+        <div class="spec-item"><span class="panel-label">Operated By</span><span id="spec-crew" style="display:block; margin-top:4px; font-size: 14px;">-</span></div>
+        <div class="spec-item"><span class="panel-label">Primary Zone</span><span id="spec-base" style="display:block; margin-top:4px; font-size: 14px;">-</span></div>
+        <div class="spec-item"><span class="panel-label">Coordinates</span><span id="spec-coords" style="display:block; margin-top:4px; font-size: 14px; font-family: monospace;">-</span></div>
+        <div class="spec-item"><span class="panel-label">Description</span><p id="spec-desc" style="font-size:13px; opacity:0.8; line-height:1.5; margin-top:8px;"></p></div>
+        <button onclick="document.getElementById('details-panel').classList.remove('active')" style="width:100%; background:var(--yun-orange); color:white; border:none; padding:14px; border-radius:8px; cursor:pointer; font-weight:bold; text-transform:uppercase; margin-top: 20px;">Dismiss</button>
+    </div>
+</div>
 
-  init();
-  animate();
+<model-viewer id="main-viewer" ar ar-modes="webxr scene-viewer quick-look" camera-controls shadow-intensity="1" tone-mapping="neutral" interaction-prompt="none">
+    <div slot="ar-button" style="display:none;"></div>
+</model-viewer>
 
-  function init() {
-    container = document.createElement('div');
-    document.body.appendChild(container);
+<script>
+    const viewer = document.querySelector('#main-viewer');
+    const select = document.querySelector('#model-select');
+    const hotspotBtn = document.querySelector('#toggle-hotspots');
+    const arBtn = document.querySelector('#ar-button');
+    const DEPLOYMENT_RADIUS_METERS = 15;
 
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
-
-    const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 2);
-    light.position.set(0.5, 1, 0.25);
-    scene.add(light);
-    
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
-    directionalLight.position.set(0, 5, 0);
-    scene.add(directionalLight);
-
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.xr.enabled = true;
-    container.appendChild(renderer.domElement);
-
-    const arButton = ARButton.createButton(renderer, { 
-      requiredFeatures: ['hit-test'],
-      optionalFeatures: ['dom-overlay'],
-      domOverlay: { root: document.body }
-    });
-    document.body.appendChild(arButton);
-
-    controller = renderer.xr.getController(0);
-    controller.addEventListener('select', onSelect);
-    scene.add(controller);
-
-    reticle = new THREE.Mesh(
-      new THREE.RingGeometry(0.1, 0.12, 32).rotateX(-Math.PI / 2),
-      new THREE.MeshBasicMaterial({ color: 0xE2E6F0 })
-    );
-    reticle.matrixAutoUpdate = false;
-    reticle.visible = false;
-    scene.add(reticle);
-
-    window.addEventListener('resize', onWindowResize);
-    
-    renderer.xr.addEventListener('sessionstart', () => {
-      uiLayer.style.pointerEvents = 'none';
-      statusUI.innerText = 'Scan area for surfaces';
-    });
-
-    bindUI();
-  }
-
-  function bindUI() {
-    document.querySelectorAll('.model-card').forEach(card => {
-      card.addEventListener('click', (e) => {
-        document.querySelectorAll('.model-card').forEach(c => c.classList.remove('selected'));
-        e.currentTarget.classList.add('selected');
-        currentModel = e.currentTarget.dataset.model;
-      });
-    });
-
-    document.getElementById('mode-manual').addEventListener('click', () => setMode('manual'));
-    document.getElementById('mode-geo').addEventListener('click', () => setMode('geo'));
-  }
-
-  function setMode(mode) {
-    currentMode = mode;
-    document.getElementById('mode-manual').classList.toggle('active', mode === 'manual');
-    document.getElementById('mode-geo').classList.toggle('active', mode === 'geo');
-    
-    if (mode === 'manual') {
-      stopGeolocation();
-      statusUI.innerText = 'Scan area for surfaces';
-    } else if (mode === 'geo') {
-      reticle.visible = false;
-      startGeolocation();
-    }
-  }
-
-  function startGeolocation() {
-    statusUI.innerText = 'Acquiring GPS data...';
-    if ("geolocation" in navigator) {
-      geoWatchId = navigator.geolocation.watchPosition(
-        (position) => {
-          geoCoordinates = position.coords;
-          statusUI.innerText = `GPS Lock: ${geoCoordinates.latitude.toFixed(4)}, ${geoCoordinates.longitude.toFixed(4)}`;
-          spawnGeospatialModel();
+    // Define target geolocations for physical AR anchoring
+    const fleetData = [
+        {
+            "name": "Aircraft Loader TLD",
+            "file": "tld_121_aircraft_loader",
+            "crew": "Ground Ops Team A",
+            "base": "Zone 1",
+            "description": "High-capacity aircraft loader used for main deck cargo operations.",
+            "lat": 51.5072, // Replace with physical deployment coordinates
+            "lng": -0.1276
         },
-        (error) => {
-          statusUI.innerText = `Location Error: ${error.code}`;
-        },
-        { enableHighAccuracy: true, maximumAge: 0 }
-      );
-    } else {
-      statusUI.innerText = 'Geolocation not supported';
-    }
-  }
-
-  function stopGeolocation() {
-    if (geoWatchId !== null) {
-      navigator.geolocation.clearWatch(geoWatchId);
-      geoWatchId = null;
-    }
-  }
-
-  function getActiveGeometry() {
-    switch(currentModel) {
-      case 'sphere': return new THREE.SphereGeometry(0.1, 32, 16);
-      case 'cylinder': return new THREE.CylinderGeometry(0.1, 0.1, 0.2, 32);
-      case 'tetra': return new THREE.TetrahedronGeometry(0.15);
-      case 'cube':
-      default: return new THREE.BoxGeometry(0.15, 0.15, 0.15);
-    }
-  }
-
-  function getMaterial(colorHex) {
-    return new THREE.MeshStandardMaterial({ 
-      color: colorHex,
-      roughness: 0.4,
-      metalness: 0.2
-    });
-  }
-
-  function onSelect() {
-    if (currentMode !== 'manual' || !reticle.visible) return;
-    const mesh = new THREE.Mesh(getActiveGeometry(), getMaterial(0x4B8E4D));
-    mesh.position.setFromMatrixPosition(reticle.matrix);
-    mesh.quaternion.setFromRotationMatrix(reticle.matrix);
-    scene.add(mesh);
-  }
-
-  function spawnGeospatialModel() {
-    if (currentMode !== 'geo') return;
-    const mesh = new THREE.Mesh(getActiveGeometry(), getMaterial(0x7A9CDB));
-    const angle = Math.random() * Math.PI * 2;
-    const radius = 2; 
-    mesh.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
-    scene.add(mesh);
-    statusUI.innerText = 'Geospatial model instantiated';
-    stopGeolocation(); 
-  }
-
-  function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  }
-
-  function animate() {
-    renderer.setAnimationLoop(render);
-  }
-
-  function render(timestamp, frame) {
-    if (frame && currentMode === 'manual') {
-      const referenceSpace = renderer.xr.getReferenceSpace();
-      const session = renderer.xr.getSession();
-
-      if (hitTestSourceRequested === false) {
-        session.requestReferenceSpace('viewer').then((refSpace) => {
-          session.requestHitTestSource({ space: refSpace }).then((source) => {
-            hitTestSource = source;
-          });
-        });
-        session.addEventListener('end', () => {
-          hitTestSourceRequested = false;
-          hitTestSource = null;
-        });
-        hitTestSourceRequested = true;
-      }
-
-      if (hitTestSource) {
-        const hitTestResults = frame.getHitTestResults(hitTestSource);
-        if (hitTestResults.length > 0) {
-          const hit = hitTestResults[0];
-          reticle.visible = true;
-          reticle.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
-          reticle.material.color.setHex(0x4B8E4D);
-          statusUI.innerText = 'Surface detected';
-        } else {
-          reticle.visible = false;
-          statusUI.innerText = 'Tracking...';
+        {
+            "name": "Ground Power Unit",
+            "file": "gpu_aiport_ground_power_unit",
+            "crew": "Maintenance Team 4",
+            "base": "Zone 2",
+            "description": "Mobile power unit providing 400Hz AC power to aircraft on the stand.",
+            "lat": 51.5075, // Replace with physical deployment coordinates
+            "lng": -0.1279
         }
-      }
+    ];
+
+    const hotspotMap = {
+        "tld_121_aircraft_loader": [
+            { pos: "-0.00289m 0.6796m 0.2817m", norm: "0m 1m 0m", label: "Main Loading Deck" },
+            { pos: "0.2443m 0.7675m -0.3819m", norm: "-0.34m 0.18m 0.91m", label: "Controls" }
+        ],
+        "gpu_aiport_ground_power_unit": [
+            { pos: "-1.28407m 0.7819m 0.0546m", norm: "-1m 0m 0m", label: "Control Panel" },
+            { pos: "1.1345m 1.1426m -0.6715m", norm: "0m 0m 1m", label: "Power Cable" }
+        ]
+    };
+
+    function initializeSystems() {
+        requestPermissions();
+        
+        const screen = document.getElementById('start-screen');
+        screen.style.opacity = '0';
+        screen.style.pointerEvents = 'none';
+        setTimeout(() => screen.style.display = 'none', 800);
+        
+        initSelect();
     }
-    renderer.render(scene, camera);
-  }
+
+    function initSelect() {
+        select.innerHTML = fleetData.map((m, i) => `<option value="${i}">${m.name.toUpperCase()}</option>`).join('');
+        updateAsset(0);
+    }
+
+    function requestPermissions() {
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition(handlePositionUpdate, handleGeoError, { 
+                enableHighAccuracy: true, 
+                maximumAge: 0 
+            });
+        }
+
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            DeviceOrientationEvent.requestPermission().then(permissionState => {
+                if (permissionState === 'granted') {
+                    window.addEventListener('deviceorientation', handleOrientationUpdate);
+                }
+            }).catch(console.error);
+        } else {
+            window.addEventListener('deviceorientation', handleOrientationUpdate, true);
+        }
+    }
+
+    function haversineDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371000;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    function handlePositionUpdate(position) {
+        const userLat = position.coords.latitude;
+        const userLng = position.coords.longitude;
+        
+        let nearestDistance = Infinity;
+        let nearestIndex = 0;
+
+        fleetData.forEach((asset, index) => {
+            const distance = haversineDistance(userLat, userLng, asset.lat, asset.lng);
+            if (distance < nearestDistance) {
+                nearestDistance = distance;
+                nearestIndex = index;
+            }
+        });
+
+        document.getElementById('data-dist').innerText = `DIST: ${nearestDistance.toFixed(1)}m`;
+
+        if (parseInt(select.value) !== nearestIndex) {
+            select.value = nearestIndex;
+            updateAsset(nearestIndex);
+        }
+
+        const statusEl = document.getElementById('data-status');
+        if (nearestDistance <= DEPLOYMENT_RADIUS_METERS) {
+            statusEl.innerText = "IN ZONE";
+            statusEl.style.color = "var(--success)";
+            arBtn.classList.add('ready');
+            arBtn.innerText = "DEPLOY AR";
+        } else {
+            statusEl.innerText = "APPROACHING";
+            statusEl.style.color = "var(--alert)";
+            arBtn.classList.remove('ready');
+            arBtn.innerText = "APPROACH ASSET TO DEPLOY";
+        }
+    }
+
+    function handleGeoError(error) {
+        document.getElementById('data-dist').innerText = "GPS ERROR";
+        document.getElementById('data-status').innerText = "OFFLINE";
+    }
+
+    function handleOrientationUpdate(event) {
+        let heading = event.webkitCompassHeading || Math.abs(event.alpha - 360);
+        if (heading) {
+            document.getElementById('data-head').innerText = `HDG: ${Math.round(heading)}°`;
+            
+            // Align virtual camera with physical heading constraint
+            const currentOrbit = viewer.getCameraOrbit();
+            viewer.cameraOrbit = `${heading}deg ${currentOrbit.phi}rad ${currentOrbit.radius}m`;
+        }
+    }
+
+    function updateAsset(idx) {
+        const asset = fleetData[idx];
+        viewer.src = `models/${asset.file}.glb`;
+        
+        document.getElementById('asset-title').innerText = asset.name;
+        document.getElementById('spec-crew').innerText = asset.crew;
+        document.getElementById('spec-base').innerText = asset.base;
+        document.getElementById('spec-coords').innerText = `${asset.lat.toFixed(5)}, ${asset.lng.toFixed(5)}`;
+        document.getElementById('spec-desc').innerText = asset.description;
+
+        viewer.querySelectorAll('.Hotspot').forEach(h => h.remove());
+
+        viewer.addEventListener('load', () => {
+            const points = hotspotMap[asset.file];
+            if (points) {
+                points.forEach((p, i) => {
+                    const b = document.createElement('button');
+                    b.className = `Hotspot ${hotspotBtn.classList.contains('active') ? '' : 'hidden'}`;
+                    b.slot = `hotspot-${i}`;
+                    b.setAttribute('data-position', p.pos);
+                    b.setAttribute('data-normal', p.norm);
+                    b.innerHTML = `<div class="HotspotAnnotation">${p.label}</div>`;
+                    b.onclick = () => {
+                        viewer.cameraTarget = p.pos;
+                        viewer.cameraOrbit = "45deg 75deg 4m";
+                    };
+                    viewer.appendChild(b);
+                });
+            }
+        }, { once: true });
+    }
+
+    hotspotBtn.onclick = () => {
+        const isActive = hotspotBtn.classList.toggle('active');
+        viewer.querySelectorAll('.Hotspot').forEach(h => {
+            isActive ? h.classList.remove('hidden') : h.classList.add('hidden');
+        });
+    };
+
+    arBtn.onclick = () => {
+        if (arBtn.classList.contains('ready')) {
+            viewer.activateAR();
+        }
+    };
 </script>
+
 </body>
 </html>
