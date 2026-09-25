@@ -25,6 +25,11 @@
             color: white;
         }
 
+        #camera-bg {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+            object-fit: cover; z-index: -1;
+        }
+
         #start-screen { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: radial-gradient(circle at center, #23272f 0%, #1a1d23 100%); 
@@ -77,8 +82,9 @@
         .panel-label { font-size: 8px; color: var(--accent); text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 2px; }
 
         select { 
-            background: transparent; color: white; border: none; font-weight: bold; font-size: 13px; outline: none; cursor: pointer; width: 100%;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; opacity: 0.8;
+            background: rgba(0,0,0,0.3); color: white; border: 1px solid var(--glass-border); border-radius: 4px;
+            font-weight: bold; font-size: 13px; outline: none; cursor: pointer; width: 100%; padding: 4px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 1; pointer-events: auto;
         }
         
         .button-group { display: flex; gap: 6px; flex-shrink: 0; }
@@ -92,11 +98,11 @@
             background: rgba(255,255,255,0.08); backdrop-filter: blur(10px); border: 1px solid var(--glass-border);
             color: white; padding: 12px 24px; border-radius: 25px; font-size: 11px;
             text-transform: uppercase; font-weight: bold; cursor: pointer;
-            transition: all 0.3s ease; opacity: 0.4; pointer-events: none;
+            transition: all 0.3s ease; opacity: 1; pointer-events: auto;
         }
 
         .ar-btn.ready {
-            background: var(--success); border-color: white; color: black; opacity: 1; pointer-events: auto;
+            background: var(--success); border-color: white; color: black;
             box-shadow: 0 0 15px rgba(0, 255, 136, 0.4);
         }
 
@@ -109,13 +115,15 @@
         .spec-content { padding: 60px 30px; }
         .spec-item { margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; }
 
-        model-viewer { width: 100vw; height: 100vh; background: #1a1d23; }
+        model-viewer { width: 100vw; height: 100vh; background: transparent; }
         .Hotspot { background: var(--yun-orange); border-radius: 50%; width: 14px; height: 14px; border: 2px solid white; cursor: pointer; transition: 0.3s; box-shadow: 0 0 10px rgba(255,106,0,0.5); }
         .Hotspot.hidden { opacity: 0; transform: scale(0); pointer-events: none; }
         .HotspotAnnotation { background: rgba(0, 0, 0, 0.85); color: white; padding: 5px 10px; border-radius: 4px; font-size: 10px; position: absolute; transform: translate(15px, -50%); border: 1px solid var(--yun-orange); white-space: nowrap; pointer-events: none; }
     </style>
 </head>
 <body>
+
+<video id="camera-bg" autoplay playsinline muted></video>
 
 <div id="start-screen">
     <div class="radar-container">
@@ -144,7 +152,7 @@
 </div>
 
 <div class="ar-container">
-    <button id="ar-button" class="ar-btn">APPROACH ASSET TO DEPLOY</button>
+    <button id="ar-button" class="ar-btn">DEPLOY AR (MANUAL)</button>
 </div>
 
 <div id="details-panel" class="details-panel">
@@ -168,8 +176,9 @@
     const hotspotBtn = document.querySelector('#toggle-hotspots');
     const arBtn = document.querySelector('#ar-button');
     const DEPLOYMENT_RADIUS_METERS = 15;
+    
+    let manualOverride = false;
 
-    // Define target geolocations for physical AR anchoring
     const fleetData = [
         {
             "name": "Aircraft Loader TLD",
@@ -177,7 +186,7 @@
             "crew": "Ground Ops Team A",
             "base": "Zone 1",
             "description": "High-capacity aircraft loader used for main deck cargo operations.",
-            "lat": 51.5072, // Replace with physical deployment coordinates
+            "lat": 51.5072, 
             "lng": -0.1276
         },
         {
@@ -186,7 +195,7 @@
             "crew": "Maintenance Team 4",
             "base": "Zone 2",
             "description": "Mobile power unit providing 400Hz AC power to aircraft on the stand.",
-            "lat": 51.5075, // Replace with physical deployment coordinates
+            "lat": 51.5075, 
             "lng": -0.1279
         }
     ];
@@ -204,6 +213,7 @@
 
     function initializeSystems() {
         requestPermissions();
+        initCameraBackground();
         
         const screen = document.getElementById('start-screen');
         screen.style.opacity = '0';
@@ -213,9 +223,25 @@
         initSelect();
     }
 
+    function initCameraBackground() {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                .then(stream => {
+                    const videoElement = document.getElementById('camera-bg');
+                    videoElement.srcObject = stream;
+                })
+                .catch(err => console.error("Camera stream access denied", err));
+        }
+    }
+
     function initSelect() {
         select.innerHTML = fleetData.map((m, i) => `<option value="${i}">${m.name.toUpperCase()}</option>`).join('');
         updateAsset(0);
+        
+        select.addEventListener('change', (e) => {
+            manualOverride = true;
+            updateAsset(e.target.value);
+        });
     }
 
     function requestPermissions() {
@@ -262,7 +288,7 @@
 
         document.getElementById('data-dist').innerText = `DIST: ${nearestDistance.toFixed(1)}m`;
 
-        if (parseInt(select.value) !== nearestIndex) {
+        if (!manualOverride && parseInt(select.value) !== nearestIndex) {
             select.value = nearestIndex;
             updateAsset(nearestIndex);
         }
@@ -272,12 +298,12 @@
             statusEl.innerText = "IN ZONE";
             statusEl.style.color = "var(--success)";
             arBtn.classList.add('ready');
-            arBtn.innerText = "DEPLOY AR";
+            arBtn.innerText = "DEPLOY AR (AUTO)";
         } else {
             statusEl.innerText = "APPROACHING";
             statusEl.style.color = "var(--alert)";
             arBtn.classList.remove('ready');
-            arBtn.innerText = "APPROACH ASSET TO DEPLOY";
+            arBtn.innerText = "DEPLOY AR (MANUAL)";
         }
     }
 
@@ -291,7 +317,6 @@
         if (heading) {
             document.getElementById('data-head').innerText = `HDG: ${Math.round(heading)}°`;
             
-            // Align virtual camera with physical heading constraint
             const currentOrbit = viewer.getCameraOrbit();
             viewer.cameraOrbit = `${heading}deg ${currentOrbit.phi}rad ${currentOrbit.radius}m`;
         }
@@ -337,9 +362,7 @@
     };
 
     arBtn.onclick = () => {
-        if (arBtn.classList.contains('ready')) {
-            viewer.activateAR();
-        }
+        viewer.activateAR();
     };
 </script>
 
