@@ -4,216 +4,106 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Tactical AR HUD</title>
+    <title>AR GPS Viewer</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- A-Frame -->
     <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
-    <!-- AR.js with Location Based AR (Pinned to stable 3.4.5 to prevent master branch script crashes) -->
     <script type='text/javascript' src='https://raw.githack.com/AR-js-org/AR.js/3.4.5/three.js/build/ar-threex-location-only.js'></script>
     <script type='text/javascript' src='https://raw.githack.com/AR-js-org/AR.js/3.4.5/aframe/build/aframe-ar.js'></script>
-    <!-- Look-at component for A-Frame (Updated to 1.0.0 to fix THREE.Math deprecation crash in A-Frame 1.3.0) -->
     <script src="https://unpkg.com/aframe-look-at-component@1.0.0/dist/aframe-look-at-component.min.js"></script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
-
         body {
             margin: 0;
             overflow: hidden;
-            font-family: 'Share Tech Mono', monospace;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: #000;
         }
 
-        /* Tactical HUD Colors & Effects */
-        .text-cyan { color: #00ffcc; text-shadow: 0 0 5px rgba(0, 255, 204, 0.7); }
-        .text-alert { color: #ff3333; text-shadow: 0 0 5px rgba(255, 51, 51, 0.7); }
-        .bg-cyan-hud { background-color: rgba(0, 255, 204, 0.1); border: 1px solid rgba(0, 255, 204, 0.5); }
-        
-        .scanlines {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: linear-gradient(
-                to bottom,
-                rgba(255,255,255,0),
-                rgba(255,255,255,0) 50%,
-                rgba(0,0,0,0.1) 50%,
-                rgba(0,0,0,0.1)
-            );
-            background-size: 100% 4px;
-            pointer-events: none;
-            z-index: 50;
-            opacity: 0.6;
-        }
-
-        .crt-flicker {
-            animation: flicker 0.15s infinite;
-            pointer-events: none;
-        }
-
-        @keyframes flicker {
-            0% { opacity: 0.95; }
-            50% { opacity: 1; }
-            100% { opacity: 0.98; }
-        }
-
-        /* Crosshairs */
-        .crosshair-center {
+        .center-dot {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 40px;
-            height: 40px;
-            pointer-events: none;
-            z-index: 40;
-        }
-        .crosshair-line { background-color: #00ffcc; position: absolute; box-shadow: 0 0 5px #00ffcc; }
-        .crosshair-h { top: 50%; left: 0; width: 100%; height: 2px; transform: translateY(-50%); }
-        .crosshair-v { top: 0; left: 50%; width: 2px; height: 100%; transform: translateX(-50%); }
-        .crosshair-circle {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 80px; height: 80px;
-            border: 1px dashed #00ffcc;
+            width: 4px;
+            height: 4px;
+            background-color: white;
             border-radius: 50%;
-            opacity: 0.5;
+            box-shadow: 0 0 4px rgba(0,0,0,0.5);
+            z-index: 40;
+            pointer-events: none;
         }
 
-        /* HUD Overlays */
         #hud-container {
+            display: none;
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
             z-index: 30;
             pointer-events: none;
-            display: none;
         }
 
-        /* Initial Auth Screen */
-        #auth-screen {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-color: #050505;
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .corner-bracket {
-            position: absolute;
-            width: 30px; height: 30px;
-            border-color: #00ffcc;
-            border-style: solid;
-        }
-        .tl { top: 20px; left: 20px; border-width: 3px 0 0 3px; }
-        .tr { top: 20px; right: 20px; border-width: 3px 3px 0 0; }
-        .bl { bottom: 20px; left: 20px; border-width: 0 0 3px 3px; }
-        .br { bottom: 20px; right: 20px; border-width: 0 3px 3px 0; }
-
-        .btn-auth {
-            pointer-events: auto;
-            border: 2px solid #00ffcc;
-            background: rgba(0, 255, 204, 0.1);
-            color: #00ffcc;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            transition: all 0.3s ease;
-        }
-        .btn-auth:active {
-            background: rgba(0, 255, 204, 0.4);
-            transform: scale(0.95);
+        .glass-panel {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
         }
     </style>
 </head>
-<body class="crt-flicker">
+<body>
 
-    <div id="auth-screen">
-        <div class="scanlines"></div>
-        <div class="corner-bracket tl"></div>
-        <div class="corner-bracket tr"></div>
-        <div class="corner-bracket bl"></div>
-        <div class="corner-bracket br"></div>
-
-        <div class="text-center mb-8">
-            <h1 class="text-4xl text-cyan font-bold mb-2">A.R.E.S.</h1>
-            <p class="text-cyan text-sm tracking-widest opacity-70">AUGMENTED RECONNAISSANCE & ENGAGEMENT SYSTEM</p>
-        </div>
-
-        <div class="w-4/5 max-w-md bg-cyan-hud p-6 rounded text-cyan text-sm mb-8 relative">
-            <p class="mb-2">> INITIALIZING BOOT SEQUENCE...</p>
-            <p class="mb-2">> CHECKING SENSOR TELEMETRY...</p>
-            <p class="mb-4 text-alert">> ERR: ACCELEROMETER/COMPASS ACCESS DENIED.</p>
-            <p class="opacity-80">> iOS PROTOCOL REQUIRES MANUAL OVERRIDE.</p>
-        </div>
-
-        <button id="btn-authorize" class="btn-auth px-8 py-4 font-bold text-lg rounded shadow-[0_0_15px_rgba(0,255,204,0.5)]">
-            AUTHORIZE SENSORS
+    <!-- Authorization Gate -->
+    <div id="auth-screen" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-zinc-900 px-4 text-center">
+        <h1 class="text-2xl text-white font-semibold mb-4">AR Sensor Access</h1>
+        <p class="text-zinc-400 mb-8 max-w-sm">Camera, GPS, and device orientation permissions are required to place 3D models in the physical environment.</p>
+        <button id="btn-authorize" class="pointer-events-auto px-6 py-3 bg-white text-black font-medium rounded-lg hover:bg-zinc-200 transition-colors">
+            Enable Sensors
         </button>
     </div>
 
+    <!-- HUD Overlay -->
     <div id="hud-container">
-        <div class="scanlines"></div>
-        
-        <!-- Reticle -->
-        <div class="crosshair-center">
-            <div class="crosshair-line crosshair-h"></div>
-            <div class="crosshair-line crosshair-v"></div>
-            <div class="crosshair-circle"></div>
+        <div class="center-dot"></div>
+
+        <!-- Top Left: Telemetry -->
+        <div class="absolute top-4 left-4 glass-panel p-3 rounded-lg text-xs sm:text-sm">
+            <div class="mb-1 text-zinc-400 text-[10px] uppercase tracking-wider">Position</div>
+            <div class="font-mono">LAT: <span id="hud-lat">--</span></div>
+            <div class="font-mono">LON: <span id="hud-lon">--</span></div>
+            <div class="font-mono mt-1 text-zinc-300">ACC: <span id="hud-acc">--</span> m</div>
         </div>
 
-        <!-- Top Left: GPS Data -->
-        <div class="absolute top-4 left-4 text-cyan text-xs sm:text-sm">
-            <div class="mb-1 border-l-2 border-[#00ffcc] pl-2">SYS_STATUS: <span class="text-[#00ff00]">ONLINE</span></div>
-            <div class="mb-1">LAT: <span id="hud-lat">AWAITING...</span></div>
-            <div class="mb-1">LON: <span id="hud-lon">AWAITING...</span></div>
-            <div class="mb-1">ALT: <span id="hud-alt">--</span> m</div>
-            <div>ACC: <span id="hud-acc">--</span> m</div>
+        <!-- Top Right: Orientation -->
+        <div class="absolute top-4 right-4 glass-panel p-3 rounded-lg text-xs sm:text-sm text-right">
+            <div class="mb-1 text-zinc-400 text-[10px] uppercase tracking-wider">Heading</div>
+            <div class="font-mono"><span id="hud-heading">--</span>°</div>
         </div>
 
-        <!-- Top Right: Orientation / Heading -->
-        <div class="absolute top-4 right-4 text-cyan text-xs sm:text-sm text-right">
-            <div class="mb-1">UPLINK: <span class="animate-pulse">ACTIVE</span></div>
-            <div class="mb-1">HDG: <span id="hud-heading">--</span>°</div>
-            <div class="mb-1">PITCH: <span id="hud-pitch">--</span>°</div>
-        </div>
-
-        <!-- Bottom Left: Mission Target Info -->
-        <div class="absolute bottom-4 left-4 text-cyan text-xs sm:text-sm border border-[#00ffcc] p-2 bg-black bg-opacity-50">
-            <div class="font-bold border-b border-[#00ffcc] pb-1 mb-1">TARGET_LOCK: UAV-7A</div>
-            <div>STATUS: DEPLOYED</div>
-            <div>DIST: <span id="hud-distance">CALCULATING...</span></div>
-        </div>
-
-        <!-- Bottom Right: Warning / Radar indicator -->
-        <div class="absolute bottom-4 right-4 flex items-end">
-            <div class="w-16 h-16 rounded-full border-2 border-[#00ffcc] bg-[#00ffcc] bg-opacity-20 flex items-center justify-center relative overflow-hidden">
-                <div class="absolute w-full h-[2px] bg-[#00ffcc] top-1/2 left-0 animate-[spin_2s_linear_infinite] origin-right"></div>
-            </div>
+        <!-- Bottom Center: Target Data -->
+        <div class="absolute bottom-6 left-1/2 transform -translate-x-1/2 glass-panel px-4 py-2 rounded-full text-sm flex gap-4">
+            <div>Model: <span class="font-semibold text-white">Active</span></div>
+            <div class="w-px bg-white/20"></div>
+            <div>Distance: <span id="hud-distance" class="font-mono font-semibold">-- m</span></div>
         </div>
     </div>
 
-    <!-- The scene is kept beneath the HUD. vr-mode-ui disabled. location-based AR enabled. -->
+    <!-- AR Scene -->
     <a-scene
         vr-mode-ui="enabled: false"
         embedded
         arjs="sourceType: webcam; debugUIEnabled: false; videoTexture: true;"
-        renderer="antialias: true; alpha: true"
+        renderer="antialias: true; alpha: true; colorManagement: true;"
         id="ar-scene">
         
-        <!-- Camera that handles GPS positioning -->
-        <a-camera gps-camera rotation-reader></a-camera>
+        <a-assets>
+            <!-- Define the 3D model source here. Replace model.glb with your exact filename -->
+            <a-asset-item id="custom-model" src="unroot/models/model.glb"></a-asset-item>
+        </a-assets>
 
-        <!-- Dynamic entities will be injected here via JavaScript -->
+        <a-camera gps-camera rotation-reader></a-camera>
     </a-scene>
 
     <script>
-        // --- State & DOM Elements ---
         const authScreen = document.getElementById('auth-screen');
         const btnAuthorize = document.getElementById('btn-authorize');
         const hudContainer = document.getElementById('hud-container');
@@ -221,168 +111,92 @@
 
         const hudLat = document.getElementById('hud-lat');
         const hudLon = document.getElementById('hud-lon');
-        const hudAlt = document.getElementById('hud-alt');
         const hudAcc = document.getElementById('hud-acc');
         const hudHeading = document.getElementById('hud-heading');
-        const hudPitch = document.getElementById('hud-pitch');
         const hudDistance = document.getElementById('hud-distance');
 
-        let isInitialized = false;
         let targetEntityPlaced = false;
         let initialPosition = null;
 
-        // --- Initialization & Permissions (iOS 13+ support) ---
         btnAuthorize.addEventListener('click', async () => {
             try {
-                // Request Device Orientation (Mandatory for iOS Safari AR)
                 if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                     const permission = await DeviceOrientationEvent.requestPermission();
                     if (permission === 'granted') {
                         startSystem();
                     } else {
-                        alert("Orientation permission denied. AR capabilities are disabled.");
+                        alert("Orientation permission denied. AR execution halted.");
                     }
                 } else {
-                    // Non-iOS 13+ devices
                     startSystem();
                 }
             } catch (error) {
-                console.error("Error requesting permission:", error);
-                startSystem(); // Fallback
+                console.error("Permission request failed:", error);
+                startSystem();
             }
         });
 
         function startSystem() {
             authScreen.style.display = 'none';
             hudContainer.style.display = 'block';
-            setupSensors();
+            initializeSensors();
         }
 
-        function setupSensors() {
-            // Track Orientation for HUD
+        function initializeSensors() {
             window.addEventListener('deviceorientation', (event) => {
                 let heading = event.webkitCompassHeading || Math.abs(event.alpha - 360);
-                let pitch = event.beta; // Front/back tilt
-                
                 if (heading) hudHeading.innerText = heading.toFixed(1);
-                if (pitch) hudPitch.innerText = pitch.toFixed(1);
             });
 
-            // Track GPS for HUD and Dynamic Model Placement
             if ("geolocation" in navigator) {
                 navigator.geolocation.watchPosition(
-                    (position) => updateLocation(position),
+                    (position) => processLocationUpdate(position),
                     (error) => console.error("GPS Error:", error),
                     { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
                 );
-            } else {
-                hudLat.innerText = "UNAVAILABLE";
-                hudLon.innerText = "UNAVAILABLE";
             }
         }
 
-        function updateLocation(position) {
+        function processLocationUpdate(position) {
             const lat = position.coords.latitude;
             const lon = position.coords.longitude;
-            const alt = position.coords.altitude;
             const acc = position.coords.accuracy;
 
-            // Update HUD
             hudLat.innerText = lat.toFixed(6);
             hudLon.innerText = lon.toFixed(6);
-            hudAlt.innerText = alt ? alt.toFixed(1) : "0.0";
             hudAcc.innerText = acc ? acc.toFixed(1) : "--";
 
-            // Place target slightly North on first fix
-            if (!targetEntityPlaced && acc < 50) { // Ensure decent accuracy before placing
+            if (!targetEntityPlaced && acc < 50) {
                 initialPosition = { lat, lon };
-                placeTacticalTarget(lat, lon);
+                placeARModel(lat, lon);
                 targetEntityPlaced = true;
             }
 
             if (targetEntityPlaced && initialPosition) {
-                // Calculate rough distance to the target (Haversine formula simplified for short distances)
-                // Target is placed +0.0005 lat. 1 deg lat is ~111km. 0.0005 is ~55.5 meters.
-                const targetLat = initialPosition.lat + 0.0005;
+                const targetLat = initialPosition.lat + 0.0001; 
                 const dLat = (targetLat - lat) * 111000;
                 const dLon = (initialPosition.lon - lon) * 111000 * Math.cos(lat * Math.PI / 180);
                 const distance = Math.sqrt(dLat * dLat + dLon * dLon);
-                hudDistance.innerText = distance.toFixed(1) + "m";
+                hudDistance.innerText = distance.toFixed(1);
             }
         }
 
-        function placeTacticalTarget(userLat, userLon) {
-            // Offset latitude by ~0.0005 degrees (~55 meters North)
-            const targetLat = userLat + 0.0005;
+        function placeARModel(userLat, userLon) {
+            // Places model approximately 11 meters North of initial GPS fix
+            const targetLat = userLat + 0.0001;
             const targetLon = userLon;
 
             const scene = document.querySelector('a-scene');
             
-            // Create container entity anchored to GPS
-            const uavContainer = document.createElement('a-entity');
-            uavContainer.setAttribute('gps-entity-place', `latitude: ${targetLat}; longitude: ${targetLon};`);
-            // Altitude/height tweaking. Elevate it roughly 10 meters up.
-            uavContainer.setAttribute('position', '0 10 0'); 
-            uavContainer.setAttribute('look-at', '[gps-camera]');
-
-            // Constructing a Low-Poly "Drone/UAV" using primitives to avoid external model loading issues
+            const modelContainer = document.createElement('a-entity');
+            modelContainer.setAttribute('gps-entity-place', `latitude: ${targetLat}; longitude: ${targetLon};`);
             
-            // Core Body
-            const core = document.createElement('a-box');
-            core.setAttribute('depth', '2');
-            core.setAttribute('height', '0.5');
-            core.setAttribute('width', '1');
-            core.setAttribute('color', '#1a1a1a');
-            core.setAttribute('material', 'metalness: 0.8; roughness: 0.2');
-            uavContainer.appendChild(core);
+            // Adjust scale based on native model dimensions. Default is 1:1.
+            modelContainer.setAttribute('gltf-model', '#custom-model');
+            modelContainer.setAttribute('scale', '1 1 1');
+            modelContainer.setAttribute('position', '0 0 0');
 
-            // Glowing Indicator Ring
-            const ring = document.createElement('a-torus');
-            ring.setAttribute('radius', '1.5');
-            ring.setAttribute('radius-tubular', '0.02');
-            ring.setAttribute('color', '#00ffcc');
-            ring.setAttribute('rotation', '90 0 0');
-            ring.setAttribute('animation', 'property: scale; dir: alternate; dur: 1000; to: 1.1 1.1 1.1; loop: true');
-            uavContainer.appendChild(ring);
-
-            // Rotors (4 corners)
-            const rotorPositions = [
-                { x: 1, z: 1 }, { x: -1, z: 1 },
-                { x: 1, z: -1 }, { x: -1, z: -1 }
-            ];
-
-            rotorPositions.forEach(pos => {
-                // Arm
-                const arm = document.createElement('a-cylinder');
-                arm.setAttribute('radius', '0.05');
-                arm.setAttribute('height', '1.5');
-                arm.setAttribute('color', '#333');
-                arm.setAttribute('position', `${pos.x/2} 0 ${pos.z/2}`);
-                arm.setAttribute('rotation', `90 ${pos.x > 0 === pos.z > 0 ? '-45' : '45'} 0`);
-                uavContainer.appendChild(arm);
-
-                // Blade
-                const blade = document.createElement('a-cylinder');
-                blade.setAttribute('radius', '0.4');
-                blade.setAttribute('height', '0.02');
-                blade.setAttribute('color', '#00ffcc');
-                blade.setAttribute('opacity', '0.7');
-                blade.setAttribute('position', `${pos.x} 0.2 ${pos.z}`);
-                blade.setAttribute('animation', 'property: rotation; to: 0 360 0; loop: true; dur: 200; easing: linear');
-                uavContainer.appendChild(blade);
-            });
-
-            // HUD Label above the drone
-            const label = document.createElement('a-text');
-            label.setAttribute('value', 'UAV-7A // HOSTILE');
-            label.setAttribute('color', '#ff3333');
-            label.setAttribute('align', 'center');
-            label.setAttribute('position', '0 2 0');
-            label.setAttribute('scale', '3 3 3');
-            label.setAttribute('look-at', '[gps-camera]');
-            uavContainer.appendChild(label);
-
-            scene.appendChild(uavContainer);
+            scene.appendChild(modelContainer);
         }
     </script>
 </body>
