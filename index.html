@@ -1,201 +1,372 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>AR GPS Viewer</title>
-
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
-    <script type='text/javascript' src='https://raw.githack.com/AR-js-org/AR.js/3.4.5/three.js/build/ar-threex-location-only.js'></script>
-    <script type='text/javascript' src='https://raw.githack.com/AR-js-org/AR.js/3.4.5/aframe/build/aframe-ar.js'></script>
-    <script src="https://unpkg.com/aframe-look-at-component@1.0.0/dist/aframe-look-at-component.min.js"></script>
-
-    <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: #000;
-        }
-
-        .center-dot {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 4px;
-            height: 4px;
-            background-color: white;
-            border-radius: 50%;
-            box-shadow: 0 0 4px rgba(0,0,0,0.5);
-            z-index: 40;
-            pointer-events: none;
-        }
-
-        #hud-container {
-            display: none;
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 30;
-            pointer-events: none;
-        }
-
-        .glass-panel {
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(4px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: white;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+<title>AR Spatial Viewer</title>
+<style>
+  :root {
+    --bg-primary: #1C1C1C;
+    --bg-surface: rgba(45, 45, 45, 0.85);
+    --color-action: #4B8E4D;
+    --color-accent: #7A9CDB;
+    --text-high: #E2E6F0;
+    --text-low: #4F4F4F;
+  }
+  body {
+    margin: 0;
+    overflow: hidden;
+    background-color: var(--bg-primary);
+    font-family: system-ui, -apple-system, sans-serif;
+    color: var(--text-high);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  canvas {
+    display: block;
+  }
+  #ui-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    z-index: 10;
+  }
+  .status-pill {
+    background: var(--bg-surface);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 10px 20px;
+    border-radius: 24px;
+    margin: 24px auto;
+    font-size: 14px;
+    font-weight: 500;
+    pointer-events: auto;
+    letter-spacing: 0.5px;
+  }
+  .controls-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 24px 16px;
+    pointer-events: auto;
+    background: linear-gradient(to top, rgba(28,28,28,0.9) 0%, rgba(28,28,28,0) 100%);
+  }
+  .fab-container {
+    display: flex;
+    justify-content: flex-end;
+    gap: 16px;
+    padding-right: 8px;
+  }
+  .fab {
+    width: 56px;
+    height: 56px;
+    border-radius: 28px;
+    border: none;
+    background: var(--bg-surface);
+    color: var(--text-low);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .fab.active {
+    background: var(--color-accent);
+    color: var(--bg-primary);
+  }
+  .carousel {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    padding: 20px;
+    background: var(--bg-surface);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 24px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    scrollbar-width: none;
+  }
+  .carousel::-webkit-scrollbar {
+    display: none;
+  }
+  .model-card {
+    min-width: 72px;
+    height: 72px;
+    background: var(--bg-primary);
+    border-radius: 16px;
+    border: 2px solid var(--text-low);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+    font-size: 12px;
+    color: var(--text-low);
+    font-weight: 600;
+  }
+  .model-card.selected {
+    border-color: var(--color-action);
+    color: var(--text-high);
+  }
+  #ARButton {
+    position: absolute !important;
+    bottom: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, 50%) !important;
+    background-color: var(--color-action) !important;
+    color: var(--text-high) !important;
+    border: none !important;
+    border-radius: 24px !important;
+    padding: 16px 32px !important;
+    font-weight: 600 !important;
+    font-family: inherit !important;
+    z-index: 20 !important;
+    opacity: 1 !important;
+  }
+</style>
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+</script>
 </head>
 <body>
-
-    <div id="auth-screen" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-zinc-900 px-4 text-center">
-        <h1 class="text-2xl text-white font-semibold mb-4">AR Sensor Access</h1>
-        <p class="text-zinc-400 mb-2 max-w-sm">Camera, GPS, and device orientation permissions are required.</p>
-        <p id="ssl-warning" class="text-red-400 text-sm mb-8 max-w-sm hidden">HTTPS is required for sensor access.</p>
-        <button id="btn-authorize" class="pointer-events-auto px-6 py-3 bg-white text-black font-medium rounded-lg hover:bg-zinc-200 transition-colors">
-            Enable Sensors
-        </button>
+<div id="ui-layer">
+  <div id="status" class="status-pill">Awaiting AR Session...</div>
+  <div class="controls-wrapper">
+    <div class="fab-container">
+      <button id="mode-manual" class="fab active">MANUAL</button>
+      <button id="mode-geo" class="fab">GEO</button>
     </div>
-
-    <div id="hud-container">
-        <div class="center-dot"></div>
-
-        <div class="absolute top-4 left-4 glass-panel p-3 rounded-lg text-xs sm:text-sm">
-            <div class="mb-1 text-zinc-400 text-[10px] uppercase tracking-wider">Position</div>
-            <div class="font-mono">LAT: <span id="hud-lat">--</span></div>
-            <div class="font-mono">LON: <span id="hud-lon">--</span></div>
-            <div class="font-mono mt-1 text-zinc-300">ACC: <span id="hud-acc">--</span> m</div>
-        </div>
-
-        <div class="absolute top-4 right-4 glass-panel p-3 rounded-lg text-xs sm:text-sm text-right">
-            <div class="mb-1 text-zinc-400 text-[10px] uppercase tracking-wider">Heading</div>
-            <div class="font-mono"><span id="hud-heading">--</span>°</div>
-        </div>
-
-        <div class="absolute bottom-6 left-1/2 transform -translate-x-1/2 glass-panel px-4 py-2 rounded-full text-sm flex gap-4">
-            <div>Model: <span class="font-semibold text-white">Active</span></div>
-            <div class="w-px bg-white/20"></div>
-            <div>Distance: <span id="hud-distance" class="font-mono font-semibold">-- m</span></div>
-        </div>
+    <div class="carousel">
+      <div class="model-card selected" data-model="cube">CUBE</div>
+      <div class="model-card" data-model="sphere">SPHERE</div>
+      <div class="model-card" data-model="cylinder">CYL</div>
+      <div class="model-card" data-model="tetra">TETRA</div>
     </div>
+  </div>
+</div>
 
-    <a-scene
-        vr-mode-ui="enabled: false"
-        embedded
-        arjs="sourceType: webcam; debugUIEnabled: false; videoTexture: true;"
-        renderer="antialias: true; alpha: true; colorManagement: true;"
-        id="ar-scene">
-        
-        <a-assets>
-            <a-asset-item id="custom-model" src="unroot/models/model.glb"></a-asset-item>
-        </a-assets>
+<script type="module">
+  import * as THREE from 'three';
+  import { ARButton } from 'three/addons/webxr/ARButton.js';
 
-        <a-camera gps-camera rotation-reader></a-camera>
-    </a-scene>
+  let container;
+  let camera, scene, renderer;
+  let controller, reticle;
+  let hitTestSource = null;
+  let hitTestSourceRequested = false;
+  
+  let currentModel = 'cube';
+  let currentMode = 'manual';
+  let geoCoordinates = null;
+  let geoWatchId = null;
 
-    <script>
-        const authScreen = document.getElementById('auth-screen');
-        const btnAuthorize = document.getElementById('btn-authorize');
-        const hudContainer = document.getElementById('hud-container');
-        const sslWarning = document.getElementById('ssl-warning');
-        
-        const hudLat = document.getElementById('hud-lat');
-        const hudLon = document.getElementById('hud-lon');
-        const hudAcc = document.getElementById('hud-acc');
-        const hudHeading = document.getElementById('hud-heading');
-        const hudDistance = document.getElementById('hud-distance');
+  const statusUI = document.getElementById('status');
+  const uiLayer = document.getElementById('ui-layer');
 
-        let targetEntityPlaced = false;
-        let initialPosition = null;
+  init();
+  animate();
 
-        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-            sslWarning.classList.remove('hidden');
-        }
+  function init() {
+    container = document.createElement('div');
+    document.body.appendChild(container);
 
-        btnAuthorize.addEventListener('click', async () => {
-            try {
-                if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                    const permission = await DeviceOrientationEvent.requestPermission();
-                    if (permission === 'granted') {
-                        startSystem();
-                    } else {
-                        alert("Orientation permission denied. AR execution halted.");
-                    }
-                } else {
-                    startSystem();
-                }
-            } catch (error) {
-                console.error("Permission request failed:", error);
-                startSystem();
-            }
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+
+    const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 2);
+    light.position.set(0.5, 1, 0.25);
+    scene.add(light);
+    
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
+    directionalLight.position.set(0, 5, 0);
+    scene.add(directionalLight);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.xr.enabled = true;
+    container.appendChild(renderer.domElement);
+
+    const arButton = ARButton.createButton(renderer, { 
+      requiredFeatures: ['hit-test'],
+      optionalFeatures: ['dom-overlay'],
+      domOverlay: { root: document.body }
+    });
+    document.body.appendChild(arButton);
+
+    controller = renderer.xr.getController(0);
+    controller.addEventListener('select', onSelect);
+    scene.add(controller);
+
+    reticle = new THREE.Mesh(
+      new THREE.RingGeometry(0.1, 0.12, 32).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ color: 0xE2E6F0 })
+    );
+    reticle.matrixAutoUpdate = false;
+    reticle.visible = false;
+    scene.add(reticle);
+
+    window.addEventListener('resize', onWindowResize);
+    
+    renderer.xr.addEventListener('sessionstart', () => {
+      uiLayer.style.pointerEvents = 'none';
+      statusUI.innerText = 'Scan area for surfaces';
+    });
+
+    bindUI();
+  }
+
+  function bindUI() {
+    document.querySelectorAll('.model-card').forEach(card => {
+      card.addEventListener('click', (e) => {
+        document.querySelectorAll('.model-card').forEach(c => c.classList.remove('selected'));
+        e.currentTarget.classList.add('selected');
+        currentModel = e.currentTarget.dataset.model;
+      });
+    });
+
+    document.getElementById('mode-manual').addEventListener('click', () => setMode('manual'));
+    document.getElementById('mode-geo').addEventListener('click', () => setMode('geo'));
+  }
+
+  function setMode(mode) {
+    currentMode = mode;
+    document.getElementById('mode-manual').classList.toggle('active', mode === 'manual');
+    document.getElementById('mode-geo').classList.toggle('active', mode === 'geo');
+    
+    if (mode === 'manual') {
+      stopGeolocation();
+      statusUI.innerText = 'Scan area for surfaces';
+    } else if (mode === 'geo') {
+      reticle.visible = false;
+      startGeolocation();
+    }
+  }
+
+  function startGeolocation() {
+    statusUI.innerText = 'Acquiring GPS data...';
+    if ("geolocation" in navigator) {
+      geoWatchId = navigator.geolocation.watchPosition(
+        (position) => {
+          geoCoordinates = position.coords;
+          statusUI.innerText = `GPS Lock: ${geoCoordinates.latitude.toFixed(4)}, ${geoCoordinates.longitude.toFixed(4)}`;
+          spawnGeospatialModel();
+        },
+        (error) => {
+          statusUI.innerText = `Location Error: ${error.code}`;
+        },
+        { enableHighAccuracy: true, maximumAge: 0 }
+      );
+    } else {
+      statusUI.innerText = 'Geolocation not supported';
+    }
+  }
+
+  function stopGeolocation() {
+    if (geoWatchId !== null) {
+      navigator.geolocation.clearWatch(geoWatchId);
+      geoWatchId = null;
+    }
+  }
+
+  function getActiveGeometry() {
+    switch(currentModel) {
+      case 'sphere': return new THREE.SphereGeometry(0.1, 32, 16);
+      case 'cylinder': return new THREE.CylinderGeometry(0.1, 0.1, 0.2, 32);
+      case 'tetra': return new THREE.TetrahedronGeometry(0.15);
+      case 'cube':
+      default: return new THREE.BoxGeometry(0.15, 0.15, 0.15);
+    }
+  }
+
+  function getMaterial(colorHex) {
+    return new THREE.MeshStandardMaterial({ 
+      color: colorHex,
+      roughness: 0.4,
+      metalness: 0.2
+    });
+  }
+
+  function onSelect() {
+    if (currentMode !== 'manual' || !reticle.visible) return;
+    const mesh = new THREE.Mesh(getActiveGeometry(), getMaterial(0x4B8E4D));
+    mesh.position.setFromMatrixPosition(reticle.matrix);
+    mesh.quaternion.setFromRotationMatrix(reticle.matrix);
+    scene.add(mesh);
+  }
+
+  function spawnGeospatialModel() {
+    if (currentMode !== 'geo') return;
+    const mesh = new THREE.Mesh(getActiveGeometry(), getMaterial(0x7A9CDB));
+    const angle = Math.random() * Math.PI * 2;
+    const radius = 2; 
+    mesh.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
+    scene.add(mesh);
+    statusUI.innerText = 'Geospatial model instantiated';
+    stopGeolocation(); 
+  }
+
+  function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  }
+
+  function animate() {
+    renderer.setAnimationLoop(render);
+  }
+
+  function render(timestamp, frame) {
+    if (frame && currentMode === 'manual') {
+      const referenceSpace = renderer.xr.getReferenceSpace();
+      const session = renderer.xr.getSession();
+
+      if (hitTestSourceRequested === false) {
+        session.requestReferenceSpace('viewer').then((refSpace) => {
+          session.requestHitTestSource({ space: refSpace }).then((source) => {
+            hitTestSource = source;
+          });
         });
+        session.addEventListener('end', () => {
+          hitTestSourceRequested = false;
+          hitTestSource = null;
+        });
+        hitTestSourceRequested = true;
+      }
 
-        function startSystem() {
-            authScreen.style.display = 'none';
-            hudContainer.style.display = 'block';
-            initializeSensors();
+      if (hitTestSource) {
+        const hitTestResults = frame.getHitTestResults(hitTestSource);
+        if (hitTestResults.length > 0) {
+          const hit = hitTestResults[0];
+          reticle.visible = true;
+          reticle.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
+          reticle.material.color.setHex(0x4B8E4D);
+          statusUI.innerText = 'Surface detected';
+        } else {
+          reticle.visible = false;
+          statusUI.innerText = 'Tracking...';
         }
-
-        function initializeSensors() {
-            window.addEventListener('deviceorientation', (event) => {
-                let heading = event.webkitCompassHeading || Math.abs(event.alpha - 360);
-                if (heading) hudHeading.innerText = heading.toFixed(1);
-            });
-
-            if ("geolocation" in navigator) {
-                navigator.geolocation.watchPosition(
-                    (position) => processLocationUpdate(position),
-                    (error) => console.error("GPS Error:", error),
-                    { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
-                );
-            }
-        }
-
-        function processLocationUpdate(position) {
-            const lat = position.coords.latitude;
-            const lon = position.coords.longitude;
-            const acc = position.coords.accuracy;
-
-            hudLat.innerText = lat.toFixed(6);
-            hudLon.innerText = lon.toFixed(6);
-            hudAcc.innerText = acc ? acc.toFixed(1) : "--";
-
-            // accuracy threshold raised to 1000m to bypass indoor/poor signal instantiation blocks
-            if (!targetEntityPlaced && acc < 1000) {
-                initialPosition = { lat, lon };
-                placeARModel(lat, lon);
-                targetEntityPlaced = true;
-            }
-
-            if (targetEntityPlaced && initialPosition) {
-                const targetLat = initialPosition.lat + 0.0001; 
-                const dLat = (targetLat - lat) * 111000;
-                const dLon = (initialPosition.lon - lon) * 111000 * Math.cos(lat * Math.PI / 180);
-                const distance = Math.sqrt(dLat * dLat + dLon * dLon);
-                hudDistance.innerText = distance.toFixed(1);
-            }
-        }
-
-        function placeARModel(userLat, userLon) {
-            const targetLat = userLat + 0.0001; // ~11 meters North
-            const targetLon = userLon;
-
-            const scene = document.querySelector('a-scene');
-            const modelContainer = document.createElement('a-entity');
-            
-            modelContainer.setAttribute('gps-entity-place', `latitude: ${targetLat}; longitude: ${targetLon};`);
-            modelContainer.setAttribute('gltf-model', '#custom-model');
-            
-            // Adjust vector string if asset renders off-screen or out of viewport bounds
-            modelContainer.setAttribute('scale', '1 1 1');
-            modelContainer.setAttribute('position', '0 0 0');
-
-            scene.appendChild(modelContainer);
-        }
-    </script>
+      }
+    }
+    renderer.render(scene, camera);
+  }
+</script>
 </body>
 </html>
