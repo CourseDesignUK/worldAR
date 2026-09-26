@@ -1,380 +1,667 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>World AT</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gaussian Splat Workflow</title>
     
     <style>
         :root {
-            --app-bg: #1a1d23; 
-            --yun-orange: #ff6a00; 
-            --glass: rgba(255, 255, 255, 0.04);
-            --glass-border: rgba(255, 255, 255, 0.12);
-            --accent: #ff9d5c;
-            --alert: #ff3333;
-            --success: #00ff88;
+            /* Mind Garden Theme Colors */
+            --bg-color: #F4F1EA; /* Soft beige */
+            --panel-bg: #FCFAF6; /* Lighter beige for panels */
+            --accent-color: #4A6B53; /* Earthy green */
+            --accent-hover: #3A5441; /* Darker green */
+            --text-main: #2C352E; /* Deep muted green/gray */
+            --text-muted: #7A857D; /* Soft grayish green */
+            --border-color: #D5D0C5; /* Warm border */
+            --danger-color: #B56B5C; /* Earthy red/terracotta */
+            --success-color: #6E8A73; /* Sage green */
         }
 
-        body, html { 
-            margin: 0; padding: 0; width: 100%; height: 100%; 
-            overflow: hidden; background-color: var(--app-bg); 
-            font-family: 'Inter', -apple-system, sans-serif;
-            color: white;
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        #camera-bg {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-            object-fit: cover; z-index: -1;
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            line-height: 1.5;
         }
 
-        #start-screen { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: radial-gradient(circle at center, #23272f 0%, #1a1d23 100%); 
-            z-index: 3000; display: flex; flex-direction: column; 
-            justify-content: center; align-items: center; 
-            transition: opacity 0.8s ease, visibility 0.8s; 
+        nav {
+            display: flex;
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            height: 64px;
+            flex-shrink: 0;
+            padding: 0 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+            z-index: 20;
         }
 
-        .radar-container {
-            position: relative; width: 200px; height: 200px;
-            display: flex; justify-content: center; align-items: center;
-            margin-bottom: 30px;
+        .tab-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            outline: none;
+            border-bottom: 3px solid transparent;
+            margin: 0 5px;
         }
 
-        .radar-sweep { 
-            position: absolute; width: 100%; height: 100%; border-radius: 50%;
-            background: conic-gradient(from -90deg at 50% 50%, transparent 270deg, rgba(255, 106, 0, 0.4) 360deg); 
-            animation: sweep 3s linear infinite; 
-        }
-        @keyframes sweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
-        .commence-btn { 
-            background: transparent; color: white; border: 1px solid var(--yun-orange); 
-            padding: 12px 30px; border-radius: 4px; cursor: pointer; 
-            font-weight: bold; letter-spacing: 2px; text-transform: uppercase;
-            z-index: 3001;
+        .tab-btn:hover {
+            color: var(--accent-color);
         }
 
-        .app-overlay { 
-            position: absolute; top: env(safe-area-inset-top, 15px); 
-            left: 50%; transform: translateX(-50%); 
-            width: 94%; max-width: 500px; z-index: 100; 
+        .tab-btn.active {
+            color: var(--accent-color);
+            border-bottom-color: var(--accent-color);
+            font-weight: 600;
         }
 
-        .control-panel { 
-            background: var(--glass); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
-            border: 1px solid var(--glass-border); padding: 10px 12px; border-radius: 12px; 
-            display: flex; justify-content: space-between; align-items: center; gap: 8px;
+        .tab-content {
+            display: none;
+            flex: 1;
+            position: relative;
+            height: calc(100vh - 64px);
+            overflow: hidden;
         }
 
-        .telemetry-panel {
-            background: var(--glass); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
-            border: 1px solid var(--glass-border); padding: 8px 12px; border-radius: 8px; 
-            margin-top: 10px; display: flex; justify-content: space-between;
-            font-size: 11px; font-family: monospace; color: var(--accent);
-            text-transform: uppercase; letter-spacing: 1px;
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
         }
 
-        .asset-info { display: flex; flex-direction: column; min-width: 0; flex: 1; }
-        .panel-label { font-size: 8px; color: var(--accent); text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 2px; }
+        .btn {
+            padding: 14px 28px;
+            border-radius: 6px;
+            border: 1px solid transparent;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #fff;
+            text-align: center;
+            text-decoration: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
 
-        select { 
-            background: rgba(0,0,0,0.3); color: white; border: 1px solid var(--glass-border); border-radius: 4px;
-            font-weight: bold; font-size: 13px; outline: none; cursor: pointer; width: 100%; padding: 4px;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 1; pointer-events: auto;
+        .btn-primary { 
+            background-color: var(--accent-color); 
         }
         
-        .button-group { display: flex; gap: 6px; flex-shrink: 0; }
-        .ui-btn { background: var(--glass-border); color: white; border: 1px solid transparent; padding: 8px 10px; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 10px; text-transform: uppercase; transition: 0.2s; white-space: nowrap; }
-        .ui-btn.active { background: var(--yun-orange); border-color: white; }
-        .ui-btn.primary { background: var(--yun-orange); }
-
-        .ar-container { position: absolute; bottom: env(safe-area-inset-bottom, 25px); left: 50%; transform: translateX(-50%); z-index: 150; }
+        .btn-primary:hover { 
+            background-color: var(--accent-hover); 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
         
-        .ar-btn {
-            background: rgba(255,255,255,0.08); backdrop-filter: blur(10px); border: 1px solid var(--glass-border);
-            color: white; padding: 12px 24px; border-radius: 25px; font-size: 11px;
-            text-transform: uppercase; font-weight: bold; cursor: pointer;
-            transition: all 0.3s ease; opacity: 1; pointer-events: auto;
+        .btn-primary:disabled { 
+            background-color: var(--border-color); 
+            color: var(--text-muted); 
+            cursor: not-allowed; 
+            box-shadow: none;
+        }
+        
+        .btn-danger { 
+            background-color: var(--danger-color); 
         }
 
-        .ar-btn.ready {
-            background: var(--success); border-color: white; color: black;
-            box-shadow: 0 0 15px rgba(0, 255, 136, 0.4);
+        #video-container {
+            position: relative;
+            width: 100%;
+            flex: 1;
+            background-color: #111; /* Keep video background dark to frame the feed */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
         }
 
-        .details-panel { 
-            position: fixed; top: 0; right: -100%; width: 100%; max-width: 350px; height: 100%; 
-            background: rgba(18, 20, 24, 0.98); backdrop-filter: blur(30px);
-            transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1); z-index: 2000; border-left: 1px solid var(--glass-border);
+        #webcam-feed {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none; /* Hidden until started */
         }
-        .details-panel.active { right: 0; }
-        .spec-content { padding: 60px 30px; }
-        .spec-item { margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; }
 
-        model-viewer { width: 100vw; height: 100vh; background: transparent; }
-        .Hotspot { background: var(--yun-orange); border-radius: 50%; width: 14px; height: 14px; border: 2px solid white; cursor: pointer; transition: 0.3s; box-shadow: 0 0 10px rgba(255,106,0,0.5); }
-        .Hotspot.hidden { opacity: 0; transform: scale(0); pointer-events: none; }
-        .HotspotAnnotation { background: rgba(0, 0, 0, 0.85); color: white; padding: 5px 10px; border-radius: 4px; font-size: 10px; position: absolute; transform: translate(15px, -50%); border: 1px solid var(--yun-orange); white-space: nowrap; pointer-events: none; }
+        .reticle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 250px;
+            height: 250px;
+            border: 1.5px dashed rgba(255, 255, 255, 0.4);
+            border-radius: 12px;
+            pointer-events: none;
+            display: none;
+        }
+
+        #camera-init-overlay {
+            position: absolute;
+            inset: 0;
+            background: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .capture-controls {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+            background: rgba(252, 250, 246, 0.9); /* Translucent Mind Garden panel */
+            padding: 20px 30px;
+            border-radius: 12px;
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--border-color);
+            display: none;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        #recording-indicator {
+            display: none;
+            color: var(--danger-color);
+            font-weight: 600;
+            letter-spacing: 1px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+
+        .process-container {
+            padding: 40px 20px;
+            max-width: 600px;
+            margin: 0 auto;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            overflow-y: auto;
+        }
+
+        .process-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .process-header h2 {
+            font-weight: 400;
+            color: var(--accent-color);
+            letter-spacing: -0.5px;
+        }
+
+        .process-step {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+        }
+
+        .step-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background-color: var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background-color: var(--accent-color);
+            transition: width 0.3s ease;
+        }
+
+        .progress-bar.success { background-color: var(--success-color); }
+
+        #viewer-container {
+            flex: 1;
+            position: relative;
+            width: 100%;
+            background-color: var(--bg-color); /* Light background for garden theme */
+        }
+
+        .viewer-controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            background: rgba(252, 250, 246, 0.85);
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .viewer-controls input[type="file"] {
+            display: none;
+        }
+
+        .file-upload-label {
+            display: inline-block;
+            background-color: var(--accent-color);
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .file-upload-label:hover {
+            background-color: var(--accent-hover);
+        }
+
+        #viewer-status {
+            margin-top: 12px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        #message-box {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--panel-bg);
+            border-left: 4px solid var(--accent-color);
+            color: var(--text-main);
+            padding: 15px 20px;
+            border-radius: 4px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            display: none;
+            z-index: 1000;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
 
-<video id="camera-bg" autoplay playsinline muted></video>
+    <nav>
+        <button class="tab-btn active" data-target="capture-tab">Capture</button>
+        <button class="tab-btn" data-target="process-tab">Process</button>
+        <button class="tab-btn" data-target="view-tab">View</button>
+    </nav>
 
-<div id="start-screen">
-    <div class="radar-container">
-        <div class="radar-sweep"></div>
-        <div style="z-index: 3002; background:var(--yun-orange); color:white; padding:6px 14px; font-weight:900; font-style:italic; border-radius:4px; font-size: 14px;">World AR</div>
-    </div>
-    <button class="commence-btn" onclick="initializeSystems()">Acquire Telemetry</button>
-</div>
+    <!-- Capture Tab -->
+    <div id="capture-tab" class="tab-content active">
+        <div id="video-container">
+            <!-- Mobile Fix: playsinline, autoplay, muted are required -->
+            <video id="webcam-feed" autoplay playsinline muted></video>
+            <div class="reticle" id="reticle"></div>
+            
+            <div id="camera-init-overlay">
+                <h2 style="margin-bottom: 10px; font-weight: 400;">Dataset Capture</h2>
+                <p style="color: var(--text-muted); margin-bottom: 30px; font-size: 0.9rem; max-width: 300px;">
+                    Ensure your subject is well lit. Orbit smoothly around the object to capture all angles.
+                </p>
+                <!-- Mobile Fix: Explicit user interaction required to start camera -->
+                <button id="init-cam-btn" class="btn btn-primary">Start Camera</button>
+                <div id="camera-error" style="display: none; color: var(--danger-color); font-size: 0.9rem; margin-top: 20px;"></div>
+            </div>
 
-<div class="app-overlay">
-    <div class="control-panel">
-        <div class="asset-info">
-            <div class="panel-label">Active Asset</div>
-            <select id="model-select"></select>
+            <div class="capture-controls" id="capture-controls">
+                <div id="recording-indicator">● RECORDING</div>
+                <button id="record-btn" class="btn btn-primary">Start Recording</button>
+                <a id="download-link" class="btn btn-primary" style="display: none; background-color: var(--success-color);">Download Video</a>
+            </div>
         </div>
-        <div class="button-group">
-            <button id="toggle-hotspots" class="ui-btn active">Hotspots</button>
-            <button onclick="document.getElementById('details-panel').classList.add('active')" class="ui-btn primary">Specs</button>
+    </div>
+
+    <!-- Process Tab -->
+    <div id="process-tab" class="tab-content">
+        <div class="process-container">
+            <div class="process-header">
+                <h2>Processing Pipeline</h2>
+                <p style="color: var(--text-muted); margin-top: 8px; font-size: 0.9rem;">Simulated backend splat generation</p>
+            </div>
+
+            <div class="process-step">
+                <div class="step-header">
+                    <span>1. Frame Extraction & Masking</span>
+                    <span id="status-1">Pending</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div id="progress-1" class="progress-bar"></div>
+                </div>
+            </div>
+
+            <div class="process-step">
+                <div class="step-header">
+                    <span>2. Structure from Motion (SfM)</span>
+                    <span id="status-2">Pending</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div id="progress-2" class="progress-bar"></div>
+                </div>
+            </div>
+
+            <div class="process-step">
+                <div class="step-header">
+                    <span>3. Gaussian Optimization</span>
+                    <span id="status-3">Pending</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div id="progress-3" class="progress-bar"></div>
+                </div>
+            </div>
+
+            <button id="start-process-btn" class="btn btn-primary" style="margin-top: 10px;">Start Processing</button>
         </div>
     </div>
-    <div class="telemetry-panel">
-        <span id="data-dist">DIST: N/A</span>
-        <span id="data-head">HDG: N/A</span>
-        <span id="data-status" style="color: var(--alert);">SEARCHING</span>
+
+    <!-- View Tab -->
+    <div id="view-tab" class="tab-content">
+        <div id="viewer-container">
+            <!-- WebGL Canvas injected by library -->
+            <div class="viewer-controls">
+                <label class="file-upload-label">
+                    Load Local .splat
+                    <input type="file" id="splat-file-input" accept=".splat">
+                </label>
+                <div id="viewer-status">Waiting to initialize...</div>
+            </div>
+        </div>
     </div>
-</div>
 
-<div class="ar-container">
-    <button id="ar-button" class="ar-btn">DEPLOY AR (MANUAL)</button>
-</div>
+    <div id="message-box"></div>
 
-<div id="details-panel" class="details-panel">
-    <div class="spec-content">
-        <h2 id="asset-title" style="color: var(--yun-orange); font-weight: 300; text-transform: uppercase; margin-bottom:30px; font-size: 1.5rem;">-</h2>
-        <div class="spec-item"><span class="panel-label">Operated By</span><span id="spec-crew" style="display:block; margin-top:4px; font-size: 14px;">-</span></div>
-        <div class="spec-item"><span class="panel-label">Primary Zone</span><span id="spec-base" style="display:block; margin-top:4px; font-size: 14px;">-</span></div>
-        <div class="spec-item"><span class="panel-label">Coordinates</span><span id="spec-coords" style="display:block; margin-top:4px; font-size: 14px; font-family: monospace;">-</span></div>
-        <div class="spec-item"><span class="panel-label">Description</span><p id="spec-desc" style="font-size:13px; opacity:0.8; line-height:1.5; margin-top:8px;"></p></div>
-        <button onclick="document.getElementById('details-panel').classList.remove('active')" style="width:100%; background:var(--yun-orange); color:white; border:none; padding:14px; border-radius:8px; cursor:pointer; font-weight:bold; text-transform:uppercase; margin-top: 20px;">Dismiss</button>
-    </div>
-</div>
+    <script type="module">
+        import * as GaussianSplats3D from 'https://unpkg.com/@mkkellogg/gaussian-splats-3d@0.4.2/build/gaussian-splats-3d.module.js';
 
-<model-viewer id="main-viewer" ar ar-modes="webxr scene-viewer quick-look" camera-controls shadow-intensity="1" tone-mapping="neutral" interaction-prompt="none">
-    <div slot="ar-button" style="display:none;"></div>
-</model-viewer>
-
-<script>
-    const viewer = document.querySelector('#main-viewer');
-    const select = document.querySelector('#model-select');
-    const hotspotBtn = document.querySelector('#toggle-hotspots');
-    const arBtn = document.querySelector('#ar-button');
-    const DEPLOYMENT_RADIUS_METERS = 15;
-    
-    let manualOverride = false;
-    let locationsInitialized = false;
-
-    const fleetData = [
-        {
-            "name": "Aircraft Loader TLD",
-            "file": "tld_121_aircraft_loader",
-            "crew": "Ground Ops Team A",
-            "base": "Zone 1",
-            "description": "High-capacity aircraft loader used for main deck cargo operations.",
-            "lat": 0, 
-            "lng": 0
-        },
-        {
-            "name": "Ground Power Unit",
-            "file": "gpu_aiport_ground_power_unit",
-            "crew": "Maintenance Team 4",
-            "base": "Zone 2",
-            "description": "Mobile power unit providing 400Hz AC power to aircraft on the stand.",
-            "lat": 0, 
-            "lng": 0
+        // --- Utility ---
+        function showMessage(msg) {
+            const box = document.getElementById('message-box');
+            box.innerText = msg;
+            box.style.display = 'block';
+            setTimeout(() => { box.style.display = 'none'; }, 3500);
         }
-    ];
 
-    const hotspotMap = {
-        "tld_121_aircraft_loader": [
-            { pos: "-0.00289m 0.6796m 0.2817m", norm: "0m 1m 0m", label: "Main Loading Deck" },
-            { pos: "0.2443m 0.7675m -0.3819m", norm: "-0.34m 0.18m 0.91m", label: "Controls" }
-        ],
-        "gpu_aiport_ground_power_unit": [
-            { pos: "-1.28407m 0.7819m 0.0546m", norm: "-1m 0m 0m", label: "Control Panel" },
-            { pos: "1.1345m 1.1426m -0.6715m", norm: "0m 0m 1m", label: "Power Cable" }
-        ]
-    };
+        // --- Tab Switching Logic ---
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
 
-    function initializeSystems() {
-        requestPermissions();
-        initCameraBackground();
-        
-        const screen = document.getElementById('start-screen');
-        screen.style.opacity = '0';
-        screen.style.pointerEvents = 'none';
-        setTimeout(() => screen.style.display = 'none', 800);
-        
-        initSelect();
-    }
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetId = btn.getAttribute('data-target');
+                
+                tabBtns.forEach(b => b.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+                
+                btn.classList.add('active');
+                document.getElementById(targetId).classList.add('active');
 
-    function initCameraBackground() {
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-                .then(stream => {
-                    const videoElement = document.getElementById('camera-bg');
-                    videoElement.srcObject = stream;
-                })
-                .catch(err => console.error("Camera stream access denied", err));
-        }
-    }
-
-    function initSelect() {
-        select.innerHTML = fleetData.map((m, i) => `<option value="${i}">${m.name.toUpperCase()}</option>`).join('');
-        updateAsset(0);
-        
-        select.addEventListener('change', (e) => {
-            manualOverride = true;
-            updateAsset(e.target.value);
+                // Initialize viewer only when tab is opened to save resources
+                if(targetId === 'view-tab' && !viewerInitialized) {
+                    initViewer();
+                }
+            });
         });
-    }
 
-    function requestPermissions() {
-        if (navigator.geolocation) {
-            navigator.geolocation.watchPosition(handlePositionUpdate, handleGeoError, { 
-                enableHighAccuracy: true, 
-                maximumAge: 0 
+        const videoElement = document.getElementById('webcam-feed');
+        const initCamBtn = document.getElementById('init-cam-btn');
+        const overlay = document.getElementById('camera-init-overlay');
+        const controls = document.getElementById('capture-controls');
+        const reticle = document.getElementById('reticle');
+        const recordBtn = document.getElementById('record-btn');
+        const downloadLink = document.getElementById('download-link');
+        const recordingIndicator = document.getElementById('recording-indicator');
+        const cameraError = document.getElementById('camera-error');
+
+        let mediaStream = null;
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let isRecording = false;
+
+        initCamBtn.addEventListener('click', async () => {
+            try {
+                initCamBtn.disabled = true;
+                initCamBtn.innerText = "Requesting Access...";
+                
+                // Mobile fix: Explicit constraints for back camera, loose on resolution
+                const constraints = {
+                    video: { facingMode: { ideal: "environment" } },
+                    audio: false
+                };
+
+                mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+                videoElement.srcObject = mediaStream;
+                
+                // Once stream plays, hide overlay and show controls
+                videoElement.onloadedmetadata = () => {
+                    videoElement.play();
+                    videoElement.style.display = 'block';
+                    overlay.style.display = 'none';
+                    controls.style.display = 'flex';
+                    reticle.style.display = 'block';
+                };
+            } catch (err) {
+                console.error("Camera access failed", err);
+                cameraError.style.display = 'block';
+                cameraError.innerText = "Camera access denied. Please check permissions.";
+                initCamBtn.innerText = "Start Camera";
+                initCamBtn.disabled = false;
+            }
+        });
+
+        recordBtn.addEventListener('click', () => {
+            if (!isRecording) {
+                recordedChunks = [];
+                // Let browser choose default supported format (fixes iOS unsupported mime type crash)
+                try {
+                    mediaRecorder = new MediaRecorder(mediaStream);
+                } catch (e) {
+                    showMessage("Recording API not supported in this browser.");
+                    return;
+                }
+
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) recordedChunks.push(e.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    // Create generic video blob, will inherit recorder's chosen format (mp4/webm)
+                    const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || 'video/mp4' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    // Determine extension based on chosen mime type
+                    const ext = (mediaRecorder.mimeType && mediaRecorder.mimeType.includes('webm')) ? 'webm' : 'mp4';
+                    
+                    downloadLink.href = url;
+                    downloadLink.download = `splat_dataset_${Date.now()}.${ext}`;
+                    downloadLink.style.display = 'inline-block';
+                    showMessage("Capture complete. Ready to download/process.");
+                };
+
+                mediaRecorder.start(200);
+                isRecording = true;
+                recordBtn.innerText = "Stop Recording";
+                recordBtn.classList.replace('btn-primary', 'btn-danger');
+                recordingIndicator.style.display = 'block';
+                downloadLink.style.display = 'none';
+
+            } else {
+                mediaRecorder.stop();
+                isRecording = false;
+                recordBtn.innerText = "Start Recording";
+                recordBtn.classList.replace('btn-danger', 'btn-primary');
+                recordingIndicator.style.display = 'none';
+            }
+        });
+
+        const startProcessBtn = document.getElementById('start-process-btn');
+        
+        async function animateProgress(id, duration, statusText) {
+            return new Promise(resolve => {
+                const bar = document.getElementById(`progress-${id}`);
+                const status = document.getElementById(`status-${id}`);
+                
+                status.innerText = "Processing...";
+                status.style.color = "var(--accent-color)";
+                bar.classList.remove('success');
+                
+                let start = null;
+                
+                function step(timestamp) {
+                    if (!start) start = timestamp;
+                    const progress = timestamp - start;
+                    const percentage = Math.min((progress / duration) * 100, 100);
+                    
+                    bar.style.width = percentage + '%';
+                    
+                    if (progress < duration) {
+                        window.requestAnimationFrame(step);
+                    } else {
+                        status.innerText = statusText;
+                        status.style.color = "var(--success-color)";
+                        bar.classList.add('success');
+                        resolve();
+                    }
+                }
+                
+                window.requestAnimationFrame(step);
             });
         }
 
-        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-            DeviceOrientationEvent.requestPermission().then(permissionState => {
-                if (permissionState === 'granted') {
-                    window.addEventListener('deviceorientation', handleOrientationUpdate);
-                }
-            }).catch(console.error);
-        } else {
-            window.addEventListener('deviceorientation', handleOrientationUpdate, true);
-        }
-    }
-
-    function haversineDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371000;
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLon = (lon2 - lon1) * Math.PI / 180;
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    }
-
-    function handlePositionUpdate(position) {
-        const userLat = position.coords.latitude;
-        const userLng = position.coords.longitude;
-
-        if (!locationsInitialized) {
-            fleetData[0].lat = userLat;
-            fleetData[0].lng = userLng;
-            fleetData[1].lat = userLat + 0.00005;
-            fleetData[1].lng = userLng + 0.00005;
-            locationsInitialized = true;
-            updateAsset(select.value); 
-        }
-        
-        let nearestDistance = Infinity;
-        let nearestIndex = 0;
-
-        fleetData.forEach((asset, index) => {
-            const distance = haversineDistance(userLat, userLng, asset.lat, asset.lng);
-            if (distance < nearestDistance) {
-                nearestDistance = distance;
-                nearestIndex = index;
-            }
-        });
-
-        document.getElementById('data-dist').innerText = `DIST: ${nearestDistance.toFixed(1)}m`;
-
-        if (!manualOverride && parseInt(select.value) !== nearestIndex) {
-            select.value = nearestIndex;
-            updateAsset(nearestIndex);
-        }
-
-        const statusEl = document.getElementById('data-status');
-        if (nearestDistance <= DEPLOYMENT_RADIUS_METERS) {
-            statusEl.innerText = "IN ZONE";
-            statusEl.style.color = "var(--success)";
-            arBtn.classList.add('ready');
-            arBtn.innerText = "DEPLOY AR (AUTO)";
-        } else {
-            statusEl.innerText = "APPROACHING";
-            statusEl.style.color = "var(--alert)";
-            arBtn.classList.remove('ready');
-            arBtn.innerText = "DEPLOY AR (MANUAL)";
-        }
-    }
-
-    function handleGeoError(error) {
-        document.getElementById('data-dist').innerText = "GPS ERROR";
-        document.getElementById('data-status').innerText = "OFFLINE";
-    }
-
-    function handleOrientationUpdate(event) {
-        let heading = event.webkitCompassHeading || Math.abs(event.alpha - 360);
-        if (heading) {
-            document.getElementById('data-head').innerText = `HDG: ${Math.round(heading)}°`;
+        startProcessBtn.addEventListener('click', async () => {
+            startProcessBtn.disabled = true;
+            startProcessBtn.innerText = "Pipeline Running...";
             
-            const currentOrbit = viewer.getCameraOrbit();
-            viewer.cameraOrbit = `${heading}deg ${currentOrbit.phi}rad ${currentOrbit.radius}m`;
-        }
-    }
-
-    function updateAsset(idx) {
-        const asset = fleetData[idx];
-        viewer.src = `models/${asset.file}.glb`;
-        
-        document.getElementById('asset-title').innerText = asset.name;
-        document.getElementById('spec-crew').innerText = asset.crew;
-        document.getElementById('spec-base').innerText = asset.base;
-        document.getElementById('spec-coords').innerText = `${asset.lat.toFixed(5)}, ${asset.lng.toFixed(5)}`;
-        document.getElementById('spec-desc').innerText = asset.description;
-
-        viewer.querySelectorAll('.Hotspot').forEach(h => h.remove());
-
-        viewer.addEventListener('load', () => {
-            const points = hotspotMap[asset.file];
-            if (points) {
-                points.forEach((p, i) => {
-                    const b = document.createElement('button');
-                    b.className = `Hotspot ${hotspotBtn.classList.contains('active') ? '' : 'hidden'}`;
-                    b.slot = `hotspot-${i}`;
-                    b.setAttribute('data-position', p.pos);
-                    b.setAttribute('data-normal', p.norm);
-                    b.innerHTML = `<div class="HotspotAnnotation">${p.label}</div>`;
-                    b.onclick = () => {
-                        viewer.cameraTarget = p.pos;
-                        viewer.cameraOrbit = "45deg 75deg 4m";
-                    };
-                    viewer.appendChild(b);
-                });
+            // Reset
+            for(let i=1; i<=3; i++) {
+                document.getElementById(`progress-${i}`).style.width = '0%';
+                document.getElementById(`status-${i}`).innerText = 'Pending';
+                document.getElementById(`status-${i}`).style.color = 'var(--text-muted)';
             }
-        }, { once: true });
-    }
 
-    hotspotBtn.onclick = () => {
-        const isActive = hotspotBtn.classList.toggle('active');
-        viewer.querySelectorAll('.Hotspot').forEach(h => {
-            isActive ? h.classList.remove('hidden') : h.classList.add('hidden');
+            await animateProgress(1, 1500, "Masks generated (120 frames)");
+            await animateProgress(2, 3000, "Sparse point cloud complete");
+            await animateProgress(3, 4000, "Splat generated successfully");
+
+            startProcessBtn.innerText = "Processing Complete";
+            showMessage("Mock processing finished. Ready to view.");
+            
+            setTimeout(() => {
+                startProcessBtn.disabled = false;
+                startProcessBtn.innerText = "Restart Pipeline";
+            }, 3000);
         });
-    };
 
-    arBtn.onclick = () => {
-        viewer.activateAR();
-    };
-</script>
+        let viewerInitialized = false;
+        let splatViewer = null;
+        const viewerStatus = document.getElementById('viewer-status');
+        const fileInput = document.getElementById('splat-file-input');
 
+        function initViewer() {
+            viewerInitialized = true;
+            
+            // Setting a light background color for the Mind Garden theme
+            splatViewer = new GaussianSplats3D.Viewer({
+                'rootElement': document.getElementById('viewer-container'),
+                'cameraUp': [0, -1, -0.6],
+                'initialCameraPosition': [-1, -4, 6],
+                'initialCameraLookAt': [0, 4, 0],
+                'halfPrecision': true, // Better for mobile/web
+                'backgroundColor': '#F4F1EA' // Mind Garden beige
+            });
+
+            // Reliable external sample hosted on HuggingFace
+            const sampleUrl = 'https://huggingface.co/cakewalk/splat-data/resolve/main/train.splat';
+            
+            viewerStatus.innerText = "Loading default scene...";
+            
+            splatViewer.addSplatScene(sampleUrl, {
+                'splatAlphaCrop': 0.2,
+                'showLoadingUI': true
+            }).then(() => {
+                splatViewer.start();
+                viewerStatus.innerText = "Ready. Orbit: 1-Finger Drag | Pan: 2-Finger Drag";
+            }).catch(err => {
+                console.error("Failed to load sample:", err);
+                viewerStatus.innerText = "Failed to load default scene. Upload a .splat file.";
+            });
+        }
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const url = URL.createObjectURL(file);
+            viewerStatus.innerText = `Loading ${file.name}...`;
+
+            // Completely rebuild UI container for new viewer instance
+            document.getElementById('viewer-container').innerHTML = `
+                <div class="viewer-controls">
+                    <label class="file-upload-label">
+                        Load Local .splat
+                        <input type="file" id="splat-file-input" accept=".splat">
+                    </label>
+                    <div id="viewer-status">Loading local file...</div>
+                </div>
+            `;
+            
+            // Re-bind file listener after DOM replacement
+            document.getElementById('splat-file-input').addEventListener('change', arguments.callee);
+            
+            splatViewer = new GaussianSplats3D.Viewer({
+                'rootElement': document.getElementById('viewer-container'),
+                'cameraUp': [0, -1, -0.6],
+                'initialCameraPosition': [-1, -4, 6],
+                'initialCameraLookAt': [0, 4, 0],
+                'backgroundColor': '#F4F1EA'
+            });
+
+            splatViewer.addSplatScene(url, {
+                'showLoadingUI': true
+            }).then(() => {
+                splatViewer.start();
+                document.getElementById('viewer-status').innerText = `Loaded: ${file.name}`;
+                URL.revokeObjectURL(url); 
+            }).catch(err => {
+                console.error("Error loading local file:", err);
+                document.getElementById('viewer-status').innerText = "Error loading file. Check console.";
+            });
+        });
+
+    </script>
 </body>
 </html>
