@@ -3,444 +3,478 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Fire Service College - Geospatial AR Map</title>
+<title>FSC Tactical GeoAR</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-<!-- A-Frame & AR.js Location-Based System -->
+<!-- A-Frame & AR.js Location Engine -->
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
 
 <style>
 :root {
-  --bg-base: #0b1210;
-  --panel-bg: rgba(16, 26, 22, 0.92);
-  --text-primary: #f0fdf4;
-  --text-secondary: #94a3b8;
-  --accent-primary: #059669;
-  --accent-secondary: #34d399;
-  --border: rgba(52, 211, 153, 0.25);
-  --accent-glow: rgba(5, 150, 105, 0.35);
-  --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --bg-core: #050b08;
+  --glass-surface: rgba(11, 20, 16, 0.78);
+  --glass-border: rgba(52, 211, 153, 0.25);
+  --accent-emerald: #059669;
+  --accent-mint: #34d399;
+  --accent-cyan: #38bdf8;
+  --text-main: #f0fdf4;
+  --text-muted: #94a3b8;
+  --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 *, *::before, *::after {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-body { 
-  font-family: var(--font-stack); 
-  background: var(--bg-base); 
-  color: var(--text-primary); 
-  margin: 0; 
-  padding: 10px; 
-  box-sizing: border-box; 
-  display: flex; 
-  flex-direction: column; 
-  height: 100vh; 
-  gap: 8px; 
-  overflow: hidden; 
-  -webkit-user-select: none;
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-core);
+  font-family: var(--font-stack);
+  color: var(--text-main);
   user-select: none;
-  -webkit-font-smoothing: antialiased;
+  -webkit-user-select: none;
+  touch-action: none;
 }
 
-/* --- SPARK / INITIALIZATION SCREEN --- */
-#start-screen { 
-  position: fixed; 
-  top: 0; 
-  left: 0; 
-  width: 100vw; 
-  height: 100vh; 
-  background: radial-gradient(circle at center, #11221b 0%, var(--bg-base) 100%); 
-  z-index: 9999; 
-  display: flex; 
-  flex-direction: column; 
-  justify-content: center; 
-  align-items: center; 
-  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.6s;
-  text-align: center; 
-  padding: 24px;
-}
-
-.radar-container {
-  position: relative; 
-  width: 200px; 
-  height: 200px;
-  display: flex; 
-  justify-content: center; 
-  align-items: center;
-  margin-bottom: 28px;
-}
-
-.radar-sweep { 
-  position: absolute; 
-  width: 100%; 
-  height: 100%; 
-  border-radius: 50%;
-  background: conic-gradient(from -90deg at 50% 50%, transparent 270deg, var(--accent-glow) 360deg); 
-  animation: sweep 3.5s linear infinite; 
-  border: 1px solid var(--border);
-}
-@keyframes sweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
-.radar-center-node {
-  z-index: 2; 
-  background: rgba(5, 150, 105, 0.15); 
-  color: var(--accent-secondary); 
-  padding: 10px 18px; 
-  font-weight: 700; 
-  letter-spacing: 1.5px; 
-  border-radius: 6px; 
-  font-size: 11px;
-  border: 1px solid var(--accent-primary);
-  backdrop-filter: blur(8px);
-  text-transform: uppercase;
-}
-
-.commence-btn { 
-  background: var(--accent-primary); 
-  color: #ffffff; 
-  border: 1px solid var(--accent-secondary); 
-  padding: 12px 28px; 
-  border-radius: 6px; 
-  cursor: pointer; 
-  font-weight: 700; 
-  letter-spacing: 1px; 
-  text-transform: uppercase;
-  font-size: 11px; 
-  transition: background 0.2s ease, transform 0.2s ease;
-}
-.commence-btn:hover { background: #047857; }
-.commence-btn:active { transform: scale(0.98); }
-
-/* --- HUD TOP BAR --- */
-.status-bar { 
-  background: var(--panel-bg); 
-  padding: 10px 14px; 
-  border-radius: 8px; 
-  border: 1px solid var(--border); 
-  display: flex; 
-  justify-content: space-between; 
-  align-items: center; 
-  font-size: 0.85rem; 
-  font-weight: 700; 
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  flex-shrink: 0; 
-  color: var(--accent-secondary); 
-  backdrop-filter: blur(12px);
-}
-.status-indicator {
+/* ==========================================================================
+   1. FULLSCREEN SPARK / INITIALIZATION SCREEN
+   ========================================================================== */
+#splash-screen {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  background: radial-gradient(circle at center, #11221b 0%, var(--bg-core) 100%);
+  z-index: 10000;
   display: flex;
+  flex-direction: column;
+  justify-content: center;
   align-items: center;
-  gap: 6px;
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
+  text-align: center;
+  padding: 32px 24px;
+  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.5s;
 }
-.live-dot {
-  width: 8px;
-  height: 8px;
+
+.radar-wrapper {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.radar-sweep {
+  position: absolute;
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
-  background: var(--accent-secondary);
-  box-shadow: 0 0 6px var(--accent-secondary);
+  background: conic-gradient(from -90deg at 50% 50%, transparent 270deg, rgba(5, 150, 105, 0.4) 360deg);
+  animation: radarRotate 3.2s linear infinite;
+  border: 1px solid var(--glass-border);
+}
+@keyframes radarRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
-.map-wrapper { 
-  background: #091310; 
-  border-radius: 8px; 
-  position: relative; 
-  overflow: hidden; 
-  flex-grow: 1; 
-  min-height: 0; 
-  border: 1px solid var(--border); 
+.radar-core {
+  z-index: 2;
+  background: rgba(5, 150, 105, 0.2);
+  color: var(--accent-mint);
+  padding: 10px 18px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  border-radius: 8px;
+  font-size: 11px;
+  border: 1px solid var(--accent-emerald);
+  backdrop-filter: blur(10px);
+  text-transform: uppercase;
 }
-#map { 
-  width: 100%; 
-  height: 100%; 
-  background: #091310; 
-}
-.leaflet-container { font-family: var(--font-stack); }
-.leaflet-control-attribution { display: none; }
 
+.splash-title {
+  font-size: 1.2rem;
+  letter-spacing: 2px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-main);
+  margin-bottom: 8px;
+}
+
+.splash-desc {
+  max-width: 320px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 36px;
+}
+
+.launch-btn {
+  background: var(--accent-emerald);
+  color: #ffffff;
+  border: 1px solid var(--accent-mint);
+  padding: 14px 36px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  box-shadow: 0 0 20px rgba(5, 150, 105, 0.4);
+  transition: transform 0.2s, background 0.2s;
+}
+.launch-btn:active {
+  transform: scale(0.97);
+  background: #047857;
+}
+
+/* ==========================================================================
+   2. MAIN APPLICATION VIEWPORT (EDGE-TO-EDGE)
+   ========================================================================== */
+#view-container {
+  position: absolute;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  z-index: 1;
+}
+
+#map-view, #ar-view {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+#map-view {
+  z-index: 2;
+  background: #091310;
+}
+
+#ar-view {
+  z-index: 1;
+  display: none;
+}
+
+#ar-view.active {
+  display: block;
+}
+
+/* Dark mode for Leaflet tiles */
 .leaflet-tile-pane {
   filter: invert(100%) hue-rotate(180deg) brightness(85%) contrast(90%) saturate(80%);
 }
+.leaflet-control-attribution { display: none !important; }
+.leaflet-control-zoom { border: none !important; }
 
-.weather-data { 
-  display: flex; 
-  justify-content: space-between; 
-  background: var(--panel-bg); 
-  padding: 10px 14px; 
-  border-radius: 8px; 
-  border: 1px solid var(--border); 
-  margin-top: 2px; 
-  flex-shrink: 0; 
-  backdrop-filter: blur(12px);
-}
-.weather-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.weather-label { color: var(--text-secondary); font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em; }
-.weather-val { color: var(--accent-secondary); font-family: monospace; font-size: 0.95rem; font-weight: 700; }
-
-.control-buttons { display: flex; gap: 8px; flex-shrink: 0; padding-bottom: env(safe-area-inset-bottom, 0px); }
-.control-btn { 
-  flex: 1; 
-  background: var(--panel-bg); 
-  color: var(--text-primary); 
-  border: 1px solid var(--border); 
-  padding: 11px; 
-  border-radius: 8px; 
-  font-family: var(--font-stack); 
-  font-weight: 700; 
-  font-size: 0.8rem; 
-  letter-spacing: 0.08em; 
-  text-transform: uppercase; 
-  cursor: pointer; 
-  backdrop-filter: blur(12px);
-  transition: background 0.2s, border-color 0.2s; 
-}
-.control-btn.ar-highlight {
-  background: rgba(5, 150, 105, 0.25);
-  border-color: var(--accent-secondary);
-  color: var(--accent-secondary);
-}
-.control-btn:active { background: var(--accent-primary); border-color: var(--accent-secondary); color: #ffffff; }
-
-/* Map Pins */
-.leaflet-custom-hotspot {
-  background-color: var(--accent-primary);
+/* Custom Map Markers */
+.marker-rig {
+  background-color: var(--accent-emerald);
   border: 2px solid #ffffff;
   border-radius: 50%;
+  box-shadow: 0 0 12px var(--accent-mint);
   cursor: pointer;
-  box-shadow: 0 0 10px var(--accent-secondary);
 }
-.custom-user-icon {
-  background-color: #38bdf8;
+.marker-user {
+  background-color: var(--accent-cyan);
   border: 2px solid #ffffff;
   border-radius: 50%;
-  box-shadow: 0 0 10px #38bdf8;
+  box-shadow: 0 0 12px var(--accent-cyan);
 }
-.hotspot-label {
-  background-color: var(--panel-bg);
-  border: 1px solid var(--border);
-  color: var(--text-primary);
+.marker-label {
+  background: var(--glass-surface);
+  border: 1px solid var(--glass-border);
+  color: var(--text-main);
   border-radius: 6px;
-  font-family: var(--font-stack);
   font-weight: 600;
-  font-size: 0.75rem;
-  padding: 4px 8px;
+  font-size: 0.7rem;
+  padding: 3px 8px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.5);
   white-space: nowrap;
 }
-.leaflet-tooltip-bottom.hotspot-label::before { border-bottom-color: var(--panel-bg); }
+.leaflet-tooltip-bottom.marker-label::before { border-bottom-color: var(--glass-surface); }
 
-/* --- FULL-SCREEN GEOLOCATED AR OVERLAY --- */
-#ar-scene-container {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 5000;
-  background: #000000;
-}
-#ar-scene-container.active {
-  display: block;
-}
-.ar-hud-overlay {
+/* ==========================================================================
+   3. FLOATING TACTICAL HUD
+   ========================================================================== */
+.hud-layer {
   position: absolute;
-  top: env(safe-area-inset-top, 16px);
-  left: 50%;
-  transform: translateX(-50%);
-  width: 90%;
-  max-width: 480px;
-  background: var(--panel-bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 14px;
-  z-index: 5001;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: calc(env(safe-area-inset-top, 12px) + 10px) 14px calc(env(safe-area-inset-bottom, 12px) + 12px);
+}
+
+.hud-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  backdrop-filter: blur(12px);
-  font-size: 0.8rem;
-  font-weight: 600;
+  gap: 10px;
 }
-.exit-ar-btn {
-  background: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
-  border: 1px solid #ef4444;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 700;
+
+.hud-pill {
+  background: var(--glass-surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
   font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
-.ar-target-hud {
+
+.pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-mint);
+  box-shadow: 0 0 8px var(--accent-mint);
+}
+
+.hud-weather-bar {
+  display: flex;
+  gap: 10px;
+}
+.weather-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-variant-numeric: tabular-nums;
+}
+.weather-chip-val {
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: var(--accent-mint);
+  font-weight: 700;
+}
+.weather-chip-lbl {
+  font-size: 0.55rem;
+  color: var(--text-muted);
+}
+
+/* Center Reticle / Target for AR view */
+.hud-center {
+  align-self: center;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.ar-reticle {
+  display: none;
+  width: 50px;
+  height: 50px;
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  border-radius: 50%;
+  position: relative;
+}
+.ar-reticle::after {
+  content: '';
   position: absolute;
-  bottom: env(safe-area-inset-bottom, 20px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--panel-bg);
-  border: 1px solid var(--border);
+  inset: 50%;
+  width: 4px;
+  height: 4px;
+  background: var(--accent-mint);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+}
+.target-banner {
+  background: var(--glass-surface);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 0.75rem;
+  color: var(--text-main);
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+/* Bottom Controls */
+.hud-bottom {
+  display: flex;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.hud-btn {
+  flex: 1;
+  background: var(--glass-surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  color: var(--text-main);
+  padding: 14px 10px;
   border-radius: 8px;
-  padding: 10px 16px;
-  z-index: 5001;
-  font-size: 0.8rem;
-  text-align: center;
-  width: 90%;
-  max-width: 420px;
-  backdrop-filter: blur(12px);
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: 0.2s;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+.hud-btn:active {
+  transform: scale(0.98);
+}
+.hud-btn.primary {
+  background: var(--accent-emerald);
+  border-color: var(--accent-mint);
+  color: #ffffff;
+}
+.hud-btn.active-mode {
+  background: rgba(5, 150, 105, 0.4);
+  border-color: var(--accent-mint);
+  color: var(--accent-mint);
 }
 </style>
 </head>
 <body>
 
-<!-- RADAR SPARK SCREEN -->
-<div id="start-screen">
-  <div class="radar-container">
+<!-- 1. FULLSCREEN SPARK SPLASH SCREEN -->
+<div id="splash-screen">
+  <div class="radar-wrapper">
     <div class="radar-sweep"></div>
-    <div class="radar-center-node">FSC GeoAR Spatial Engine</div>
+    <div class="radar-core">Geo Engine</div>
   </div>
-  <div style="max-width:320px; font-size:12px; color:var(--text-secondary); margin-bottom:28px; line-height:1.5;">
-    Spawning models at their true WGS84 geographic anchors. Initializing real-time GPS matrix, camera tracking, and sensor telemetry.
+  <div class="splash-title">FSC Tactical GeoAR</div>
+  <div class="splash-desc">
+    WGS84 High-Precision Geospatial Spawning Engine. Real-world physical anchors and live camera registration for Fire Service College simulation rigs.
   </div>
-  <button class="commence-btn" onclick="startApp()">Initialize Operational Map</button>
+  <button class="launch-btn" onclick="initializeEngine()">Initialize System</button>
 </div>
 
-<div class="status-bar">
-  <div>FSC Spatial Anchors</div>
-  <div class="status-indicator">
-    <div class="live-dot"></div>
-    <span id="gpsStatus">STANDBY</span>
+<!-- 2. FULL VIEWPORT (MAP / AR) -->
+<div id="view-container">
+  <!-- Map Interface -->
+  <div id="map-view"></div>
+
+  <!-- Real-World AR Camera Interface -->
+  <div id="ar-view">
+    <a-scene
+      embedded
+      loading-screen="enabled: false;"
+      arjs="sourceType: webcam; debugUIEnabled: false; videoTexture: true;"
+      vr-mode-ui="enabled: false">
+      <a-camera gps-new-camera="gpsMinDistance: 5; maxDistance: 1500;" rotation-reader></a-camera>
+      <a-entity id="geoRigContainer"></a-entity>
+    </a-scene>
   </div>
 </div>
 
-<div class="map-wrapper">
-  <div id="map"></div>
-</div>
-
-<div class="weather-data">
-  <div class="weather-item"><span class="weather-label">WIND</span><span id="wSpdDisplay" class="weather-val">--</span></div>
-  <div class="weather-item"><span class="weather-label">DIR</span><span id="wDirDisplay" class="weather-val">--</span></div>
-  <div class="weather-item"><span class="weather-label">TEMP</span><span id="tempDisplay" class="weather-val">--</span></div>
-  <div class="weather-item"><span class="weather-label">NEAREST</span><span id="nearestDisplay" class="weather-val">--</span></div>
-</div>
-
-<div class="control-buttons">
-  <button id="btnLocation" class="control-btn">Locate</button>
-  <button id="btnAR" class="control-btn ar-highlight">Launch World AR</button>
-  <button id="btnReset" class="control-btn">Reset Target</button>
-</div>
-
-<!-- FULL SCREEN GEOLOCATED WORLD AR SCENE -->
-<div id="ar-scene-container">
-  <div class="ar-hud-overlay">
-    <div><span>GEO ANCHOR MODE: </span><span id="ar-gps-readout" style="color:var(--accent-secondary);">SEARCHING</span></div>
-    <button class="exit-ar-btn" id="btnExitAR">Exit AR</button>
+<!-- 3. FLOATING TACTICAL HUD -->
+<div class="hud-layer">
+  <!-- Top Bar -->
+  <div class="hud-top">
+    <div class="hud-pill">
+      <div class="pulse-dot"></div>
+      <span id="gpsStatus">GPS STANDBY</span>
+    </div>
+    <div class="hud-pill hud-weather-bar">
+      <div class="weather-chip">
+        <span class="weather-chip-val" id="hudWind">--</span>
+        <span class="weather-chip-lbl">WIND</span>
+      </div>
+      <div class="weather-chip">
+        <span class="weather-chip-val" id="hudTemp">--</span>
+        <span class="weather-chip-lbl">TEMP</span>
+      </div>
+    </div>
   </div>
 
-  <div class="ar-target-hud" id="arTargetHud">
-    <span style="color:var(--text-secondary);">AIM CAMERA AT PHYSICAL SIMULATOR LOCATION</span>
+  <!-- Center Status / AR Reticle -->
+  <div class="hud-center">
+    <div class="ar-reticle" id="arReticle"></div>
+    <div class="target-banner" id="targetBanner">Target: Cat 10 Rig (Standby)</div>
   </div>
 
-  <a-scene
-    id="arScene"
-    embedded
-    loading-screen="enabled: false;"
-    arjs="sourceType: webcam; debugUIEnabled: false; videoTexture: true;"
-    vr-mode-ui="enabled: false">
-    
-    <a-camera gps-new-camera="gpsMinDistance: 5; maxDistance: 1200;" rotation-reader></a-camera>
-    
-    <!-- Geolocation Anchors dynamically injected via JavaScript -->
-    <a-entity id="geoModelsContainer"></a-entity>
-  </a-scene>
+  <!-- Bottom Action Dock -->
+  <div class="hud-bottom">
+    <button id="btnToggleView" class="hud-btn primary">Switch to AR Camera</button>
+    <button id="btnRecenter" class="hud-btn">Center Me</button>
+    <button id="btnResetView" class="hud-btn">Reset Field</button>
+  </div>
 </div>
 
 <script>
   const DOM = {
-    startScreen: document.getElementById('start-screen'),
-    gpsStatus: document.getElementById('gpsStatus'), 
-    wSpdDisplay: document.getElementById('wSpdDisplay'),
-    wDirDisplay: document.getElementById('wDirDisplay'),
-    tempDisplay: document.getElementById('tempDisplay'),
-    nearestDisplay: document.getElementById('nearestDisplay'),
-    btnLocation: document.getElementById('btnLocation'),
-    btnReset: document.getElementById('btnReset'),
-    btnAR: document.getElementById('btnAR'),
-    btnExitAR: document.getElementById('btnExitAR'),
-    arContainer: document.getElementById('ar-scene-container'),
-    arGpsReadout: document.getElementById('ar-gps-readout'),
-    arTargetHud: document.getElementById('arTargetHud'),
-    geoModelsContainer: document.getElementById('geoModelsContainer')
+    splash: document.getElementById('splash-screen'),
+    mapView: document.getElementById('map-view'),
+    arView: document.getElementById('ar-view'),
+    gpsStatus: document.getElementById('gpsStatus'),
+    hudWind: document.getElementById('hudWind'),
+    hudTemp: document.getElementById('hudTemp'),
+    targetBanner: document.getElementById('targetBanner'),
+    arReticle: document.getElementById('arReticle'),
+    btnToggleView: document.getElementById('btnToggleView'),
+    btnRecenter: document.getElementById('btnRecenter'),
+    btnResetView: document.getElementById('btnResetView'),
+    geoRigContainer: document.getElementById('geoRigContainer')
   };
 
-  let map, userMarker = null, userPos = null;
+  let map = null, userMarker = null, userCoords = null;
+  let activeMode = 'MAP'; // 'MAP' | 'AR'
   const originLat = 51.9943, originLon = -1.6823;
-  
-  // Real world coordinates for all 10 simulators
+
   const simulators = [
-    { id: "sim-2", name: "Cat 10 Rig", lat: 51.996011, lng: -1.683188, model_src: "models/rig.glb", scale: "1 1 1" },
-    { id: "sim-3", name: "ARFF Rig C-17", lat: 51.998301, lng: -1.678853, model_src: "models/arff.glb", scale: "1 1 1" },
-    { id: "sim-4", name: "Merlin Sim", lat: 51.996062, lng: -1.682645, model_src: "models/merlin.glb", scale: "1 1 1" },
-    { id: "sim-5", name: "Industrial A", lat: 51.99572358454232, lng: -1.677712924343045, model_src: "models/IndA.glb", scale: "1 1 1" },
-    { id: "sim-6", name: "Cessna", lat: 52.000157, lng: -1.678911, model_src: "models/cessna.glb", scale: "1 1 1" },
-    { id: "sim-7", name: "Tornado", lat: 51.998965, lng: -1.678473, model_src: "models/f3.glb", scale: "1 1 1" },
-    { id: "sim-8", name: "Lynx helicopter", lat: 52.000487, lng: -1.677733, model_src: "models/lynx.glb", scale: "1 1 1" },
-    { id: "sim-9", name: "Drill tower", lat: 51.995679, lng: -1.678509, model_src: "models/mdt.glb", scale: "1 1 1" },
-    { id: "sim-10", name: "USAR Building", lat: 51.995794, lng: -1.674954, model_src: "models/usar.glb", scale: "1 1 1" },
-    { id: "sim-11", name: "Gym", lat: 51.991110, lng: -1.676447, model_src: "models/gym.glb", scale: "1 1 1" }
+    { id: "sim-2", name: "Cat 10 Rig", lat: 51.996011, lng: -1.683188, model: "models/rig.glb", scale: "1 1 1" },
+    { id: "sim-3", name: "ARFF Rig C-17", lat: 51.998301, lng: -1.678853, model: "models/arff.glb", scale: "1 1 1" },
+    { id: "sim-4", name: "Merlin Sim", lat: 51.996062, lng: -1.682645, model: "models/merlin.glb", scale: "1 1 1" },
+    { id: "sim-5", name: "Industrial A", lat: 51.995723, lng: -1.677712, model: "models/IndA.glb", scale: "1 1 1" },
+    { id: "sim-6", name: "Cessna", lat: 52.000157, lng: -1.678911, model: "models/cessna.glb", scale: "1 1 1" },
+    { id: "sim-7", name: "Tornado", lat: 51.998965, lng: -1.678473, model: "models/f3.glb", scale: "1 1 1" },
+    { id: "sim-8", name: "Lynx helicopter", lat: 52.000487, lng: -1.677733, model: "models/lynx.glb", scale: "1 1 1" },
+    { id: "sim-9", name: "Drill tower", lat: 51.995679, lng: -1.678509, model: "models/mdt.glb", scale: "1 1 1" },
+    { id: "sim-10", name: "USAR Building", lat: 51.995794, lng: -1.674954, model: "models/usar.glb", scale: "1 1 1" },
+    { id: "sim-11", name: "Gym", lat: 51.991110, lng: -1.676447, model: "models/gym.glb", scale: "1 1 1" }
   ];
 
   function initMap() {
-    map = L.map('map', { 
-      zoomControl: true, 
-      dragging: true, 
-      tap: false, 
-      scrollWheelZoom: true, 
-      touchZoom: true 
+    map = L.map('map-view', {
+      zoomControl: false,
+      tap: false,
+      attributionControl: false
     }).setView([originLat, originLon], 15);
-    
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-    renderHotspots();
-    map.whenReady(() => setTimeout(() => map.invalidateSize(), 150));
-  }
 
-  function renderHotspots() {
-    const customIcon = L.divIcon({ className: 'leaflet-custom-hotspot', iconSize: [16, 16], iconAnchor: [8, 8] });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
+    const rigIcon = L.divIcon({ className: 'marker-rig', iconSize: [14, 14], iconAnchor: [7, 7] });
     simulators.forEach(sim => {
-      const marker = L.marker([sim.lat, sim.lng], { icon: customIcon }).addTo(map);
-      marker.bindTooltip(sim.name, { permanent: true, direction: 'bottom', className: 'hotspot-label', offset: [0, 8] });
+      const marker = L.marker([sim.lat, sim.lng], { icon: rigIcon }).addTo(map);
+      marker.bindTooltip(sim.name, { permanent: true, direction: 'bottom', className: 'marker-label', offset: [0, 6] });
+      marker.on('click', () => {
+        DOM.targetBanner.innerText = `Selected: ${sim.name}`;
+      });
     });
   }
 
-  // Inject models with real-world GPS coordinates into the WebXR / A-Frame engine
-  function injectGeoAnchors() {
-    DOM.geoModelsContainer.innerHTML = '';
-    
-    simulators.forEach((sim) => {
+  function spawnGeoAnchors() {
+    DOM.geoRigContainer.innerHTML = '';
+    simulators.forEach(sim => {
       const entity = document.createElement('a-entity');
-      
-      // Real-world geographical location attachment
-      entity.setAttribute('gps-new-entity-place', {
-        latitude: sim.lat,
-        longitude: sim.lng
-      });
-      
-      entity.setAttribute('gltf-model', sim.model_src);
+      entity.setAttribute('gps-new-entity-place', { latitude: sim.lat, longitude: sim.lng });
+      entity.setAttribute('gltf-model', sim.model);
       entity.setAttribute('scale', sim.scale);
-      entity.setAttribute('id', `geo-anchor-${sim.id}`);
-
-      // Distance and visibility range handler
-      entity.addEventListener('gps-entity-place-loaded', () => {
-        console.log(`[GEO-AR] Spawned ${sim.name} at: ${sim.lat}, ${sim.lng}`);
-      });
-
-      DOM.geoModelsContainer.appendChild(entity);
+      DOM.geoRigContainer.appendChild(entity);
     });
   }
 
@@ -455,53 +489,47 @@ body {
     return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
   }
 
-  function updateNearestRig() {
-    if (!userPos) return;
+  function updateNearestTarget() {
+    if (!userCoords) return;
     let closest = null;
-    let minDist = Infinity;
+    let minRange = Infinity;
 
     simulators.forEach(sim => {
-      const d = calculateDistance(userPos.latitude, userPos.longitude, sim.lat, sim.lng);
-      if (d < minDist) {
-        minDist = d;
+      const d = calculateDistance(userCoords.latitude, userCoords.longitude, sim.lat, sim.lng);
+      if (d < minRange) {
+        minRange = d;
         closest = sim;
       }
     });
 
     if (closest) {
-      DOM.nearestDisplay.innerText = `${Math.round(minDist)}m`;
-      DOM.arTargetHud.innerHTML = `TARGET ANCHOR: <strong style="color:var(--accent-secondary);">${closest.name}</strong> (${Math.round(minDist)}m)`;
+      DOM.targetBanner.innerText = `Nearest: ${closest.name} (${Math.round(minRange)}m)`;
     }
   }
 
   function initSensors() {
     if ('geolocation' in navigator) {
-      DOM.gpsStatus.innerText = "LOCKING...";
+      DOM.gpsStatus.innerText = "GPS LOCKING";
       navigator.geolocation.watchPosition(
         (pos) => {
-          DOM.gpsStatus.innerText = "GPS ACTIVE";
-          DOM.arGpsReadout.innerText = `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
-          userPos = pos.coords;
-          
+          DOM.gpsStatus.innerText = "GPS LOCKED";
+          userCoords = pos.coords;
           const coords = [pos.coords.latitude, pos.coords.longitude];
-          const userIcon = L.divIcon({ className: 'custom-user-icon', iconSize: [14, 14] });
-          
+
+          const userIcon = L.divIcon({ className: 'marker-user', iconSize: [14, 14], iconAnchor: [7, 7] });
           if (!userMarker) {
             userMarker = L.marker(coords, { icon: userIcon }).addTo(map);
           } else {
             userMarker.setLatLng(coords);
           }
 
-          updateNearestRig();
+          updateNearestTarget();
         },
-        () => { 
-          DOM.gpsStatus.innerText = "NO FIX"; 
-          DOM.arGpsReadout.innerText = "SIGNAL UNAVAILABLE";
-        },
+        () => { DOM.gpsStatus.innerText = "GPS NO FIX"; },
         { enableHighAccuracy: true, maximumAge: 0, timeout: 8000 }
       );
     } else {
-      DOM.gpsStatus.innerText = "UNSUPPORTED";
+      DOM.gpsStatus.innerText = "GPS N/A";
     }
 
     if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function') {
@@ -509,51 +537,64 @@ body {
     }
   }
 
-  async function fetchWeather() {
+  async function fetchTelemetry() {
     try {
-      const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${originLat}&longitude=${originLon}&current=temperature_2m,wind_speed_10m,wind_direction_10m&wind_speed_unit=mph`);
+      const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${originLat}&longitude=${originLon}&current=temperature_2m,wind_speed_10m&wind_speed_unit=mph`);
       if (!res.ok) throw new Error();
       const data = await res.json();
-      DOM.tempDisplay.innerText = Math.round(data.current.temperature_2m) + '°C';
-      DOM.wSpdDisplay.innerText = Math.round(data.current.wind_speed_10m) + ' mph';
-      DOM.wDirDisplay.innerText = Math.round(data.current.wind_direction_10m) + '°';
+      DOM.hudWind.innerText = `${Math.round(data.current.wind_speed_10m)} mph`;
+      DOM.hudTemp.innerText = `${Math.round(data.current.temperature_2m)}°C`;
     } catch {
-      DOM.tempDisplay.innerText = 'ERR';
-      DOM.wSpdDisplay.innerText = 'ERR';
-      DOM.wDirDisplay.innerText = 'ERR';
+      DOM.hudWind.innerText = "--";
+      DOM.hudTemp.innerText = "--";
     }
   }
 
-  function startApp() {
+  function initializeEngine() {
     initMap();
     initSensors();
-    fetchWeather();
-    injectGeoAnchors();
-    
-    DOM.startScreen.style.opacity = '0';
-    DOM.startScreen.style.pointerEvents = 'none';
+    fetchTelemetry();
+    spawnGeoAnchors();
+
+    DOM.splash.style.opacity = '0';
+    DOM.splash.style.pointerEvents = 'none';
     setTimeout(() => {
-      DOM.startScreen.style.display = 'none';
+      DOM.splash.style.display = 'none';
       if (map) map.invalidateSize();
-    }, 600);
+    }, 500);
   }
 
-  // Switch to Fullscreen Spatial Camera View
-  DOM.btnAR.addEventListener('click', () => {
-    DOM.arContainer.classList.add('active');
+  // Seamless View Toggle
+  DOM.btnToggleView.addEventListener('click', () => {
+    if (activeMode === 'MAP') {
+      activeMode = 'AR';
+      DOM.mapView.style.display = 'none';
+      DOM.arView.classList.add('active');
+      DOM.arReticle.style.display = 'block';
+      DOM.btnToggleView.innerText = "Switch to Tactical Map";
+      DOM.btnToggleView.classList.add('active-mode');
+    } else {
+      activeMode = 'MAP';
+      DOM.arView.classList.remove('active');
+      DOM.arReticle.style.display = 'none';
+      DOM.mapView.style.display = 'block';
+      DOM.btnToggleView.innerText = "Switch to AR Camera";
+      DOM.btnToggleView.classList.remove('active-mode');
+      if (map) {
+        setTimeout(() => map.invalidateSize(), 50);
+      }
+    }
   });
 
-  DOM.btnExitAR.addEventListener('click', () => {
-    DOM.arContainer.classList.remove('active');
-  });
-
-  DOM.btnLocation.addEventListener('click', () => {
+  DOM.btnRecenter.addEventListener('click', () => {
     if (userMarker) {
       map.setView(userMarker.getLatLng(), 16);
     }
   });
 
-  DOM.btnReset.addEventListener('click', () => map.setView([originLat, originLon], 15));
+  DOM.btnResetView.addEventListener('click', () => {
+    map.setView([originLat, originLon], 15);
+  });
 </script>
 </body>
 </html>
