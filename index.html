@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>MIND GARDEN - AR SANCTUARY</title>
+    <title>MIND GARDEN - SPATIAL ASSET REGISTRY</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     
@@ -9,73 +9,73 @@
     
     <style>
         :root {
-            --mg-bg: #091310;
-            --mg-surface: rgba(14, 28, 22, 0.65);
-            --mg-emerald: #10b981;
-            --mg-mint: #6ee7b7;
-            --mg-soft-green: #a7f3d0;
-            --glass-border: rgba(110, 231, 183, 0.2);
-            --accent-glow: rgba(16, 185, 129, 0.4);
+            --mg-bg: #0b1210;
+            --mg-surface: rgba(16, 26, 22, 0.75);
+            --mg-emerald: #059669;
+            --mg-mint: #34d399;
+            --mg-soft-green: #d1fae5;
+            --glass-border: rgba(52, 211, 153, 0.2);
+            --accent-glow: rgba(5, 150, 105, 0.3);
             --text-main: #f0fdf4;
-            --text-dim: #a7f3d0;
+            --text-dim: #94a3b8;
         }
 
         body, html { 
             margin: 0; padding: 0; width: 100%; height: 100%; 
             overflow: hidden; background-color: var(--mg-bg); 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
             color: var(--text-main);
             user-select: none;
+            -webkit-font-smoothing: antialiased;
         }
 
-        /* --- START SCREEN --- */
+        /* --- INITIALIZATION INTERFACE --- */
         #start-screen { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: radial-gradient(circle at center, #132a22 0%, var(--mg-bg) 100%); 
+            background: radial-gradient(circle at center, #11221b 0%, var(--mg-bg) 100%); 
             z-index: 3000; display: flex; flex-direction: column; 
             justify-content: center; align-items: center; 
-            transition: opacity 0.8s ease, visibility 0.8s;
-            text-align: center; padding: 20px; box-sizing: border-box;
+            transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.6s;
+            text-align: center; padding: 24px; box-sizing: border-box;
         }
 
         .radar-container {
-            position: relative; width: 220px; height: 220px;
+            position: relative; width: 200px; height: 200px;
             display: flex; justify-content: center; align-items: center;
-            margin-bottom: 24px;
+            margin-bottom: 28px;
         }
 
         .radar-sweep { 
             position: absolute; width: 100%; height: 100%; border-radius: 50%;
             background: conic-gradient(from -90deg at 50% 50%, transparent 270deg, var(--accent-glow) 360deg); 
-            animation: sweep 4s linear infinite; 
-            border: 1px dashed var(--glass-border);
+            animation: sweep 3.5s linear infinite; 
+            border: 1px solid var(--glass-border);
         }
         @keyframes sweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
         .radar-center-node {
-            z-index: 3002; background: rgba(16, 185, 129, 0.15); 
-            color: var(--mg-mint); padding: 12px 18px; font-weight: 700; 
-            letter-spacing: 2px; border-radius: 50px; font-size: 11px;
+            z-index: 3002; background: rgba(5, 150, 105, 0.15); 
+            color: var(--mg-mint); padding: 10px 18px; font-weight: 600; 
+            letter-spacing: 1.5px; border-radius: 6px; font-size: 11px;
             border: 1px solid var(--mg-emerald);
             backdrop-filter: blur(8px);
-            box-shadow: 0 0 20px var(--accent-glow);
         }
 
         .commence-btn { 
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.05)); 
-            color: var(--mg-mint); border: 1px solid var(--mg-emerald); 
-            padding: 14px 32px; border-radius: 30px; cursor: pointer; 
-            font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
-            font-size: 11px; z-index: 3001; transition: 0.3s;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            background: var(--mg-emerald); 
+            color: #ffffff; border: 1px solid var(--mg-mint); 
+            padding: 12px 28px; border-radius: 6px; cursor: pointer; 
+            font-weight: 600; letter-spacing: 1px; text-transform: uppercase;
+            font-size: 11px; z-index: 3001; transition: 0.2s ease;
         }
-        .commence-btn:active { transform: scale(0.96); }
+        .commence-btn:hover { background: #047857; }
+        .commence-btn:active { transform: scale(0.98); }
 
-        /* --- SENSOR & COMPASS HUD --- */
+        /* --- SENSOR TELEMETRY BAR --- */
         .sensor-bar {
-            position: absolute; top: calc(env(safe-area-inset-top, 10px) + 75px);
+            position: absolute; top: calc(env(safe-area-inset-top, 10px) + 72px);
             left: 50%; transform: translateX(-50%);
-            width: 94%; max-width: 500px; z-index: 90;
+            width: 94%; max-width: 520px; z-index: 90;
             display: flex; justify-content: space-between; gap: 8px;
         }
 
@@ -83,82 +83,83 @@
             background: var(--mg-surface);
             border: 1px solid var(--glass-border);
             backdrop-filter: blur(16px);
-            border-radius: 8px; padding: 6px 12px;
+            border-radius: 8px; padding: 8px 12px;
             flex: 1; display: flex; align-items: center; justify-content: space-between;
             font-size: 11px; font-variant-numeric: tabular-nums;
         }
 
         .compass-disc {
-            width: 14px; height: 14px; border-radius: 50%;
+            width: 12px; height: 12px; border-radius: 50%;
             border: 1px solid var(--mg-mint); display: inline-block;
             position: relative; transition: transform 0.1s linear;
         }
         .compass-disc::after {
-            content: ''; position: absolute; top: 1px; left: 6px;
-            width: 2px; height: 5px; background: var(--mg-emerald);
+            content: ''; position: absolute; top: 1px; left: 5px;
+            width: 2px; height: 4px; background: var(--mg-mint);
         }
 
-        /* --- CONTROL PANEL --- */
+        /* --- NAVIGATION CONTROLS --- */
         .app-overlay { 
             position: absolute; top: env(safe-area-inset-top, 15px); 
             left: 50%; transform: translateX(-50%); 
-            width: 94%; max-width: 500px; z-index: 100; 
+            width: 94%; max-width: 520px; z-index: 100; 
         }
 
         .control-panel { 
             background: var(--mg-surface); 
-            backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             border: 1px solid var(--glass-border); 
-            padding: 10px 14px; border-radius: 16px; 
+            padding: 10px 14px; border-radius: 10px; 
             display: flex; justify-content: space-between; align-items: center;
-            gap: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            gap: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
         }
 
         .asset-info { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 
         .panel-label { 
-            font-size: 8px; color: var(--mg-mint); 
-            text-transform: uppercase; font-weight: 800; 
-            letter-spacing: 1px; margin-bottom: 2px; 
+            font-size: 9px; color: var(--mg-mint); 
+            text-transform: uppercase; font-weight: 700; 
+            letter-spacing: 0.8px; margin-bottom: 2px; 
         }
 
         select { 
             background: transparent; color: var(--text-main); border: none; 
-            font-weight: 600; font-size: 13px; outline: none; 
+            font-weight: 600; font-size: 12px; outline: none; 
             cursor: pointer; width: 100%;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
-        select option { background-color: #0d1e17; color: var(--text-main); }
+        select option { background-color: #0f1c16; color: var(--text-main); }
         
         .button-group { display: flex; gap: 6px; flex-shrink: 0; }
 
         .ui-btn {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.04);
             color: var(--text-main); border: 1px solid var(--glass-border);
-            padding: 8px 12px; border-radius: 8px;
-            font-weight: 700; cursor: pointer;
+            padding: 7px 12px; border-radius: 6px;
+            font-weight: 600; cursor: pointer;
             font-size: 10px; text-transform: uppercase;
-            transition: 0.2s; white-space: nowrap;
+            letter-spacing: 0.5px; transition: 0.2s ease;
         }
-        .ui-btn.active { background: var(--mg-emerald); border-color: var(--mg-mint); color: #052e16; }
-        .ui-btn.primary { background: rgba(16, 185, 129, 0.2); border-color: var(--mg-emerald); color: var(--mg-mint); }
+        .ui-btn.active { background: var(--mg-emerald); border-color: var(--mg-mint); color: #ffffff; }
+        .ui-btn.primary { background: rgba(5, 150, 105, 0.2); border-color: var(--mg-emerald); color: var(--mg-mint); }
 
         /* --- PROXIMITY NOTIFICATION MODAL --- */
         #proximity-alert {
-            position: fixed; top: 130px; left: 50%; transform: translateX(-50%) translateY(-20px);
-            width: 90%; max-width: 440px;
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.95), rgba(5, 46, 22, 0.95));
+            position: fixed; top: 130px; left: 50%; transform: translateX(-50%) translateY(-15px);
+            width: 90%; max-width: 480px;
+            background: var(--mg-surface);
+            backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
             border: 1px solid var(--mg-mint);
-            border-radius: 12px; padding: 14px 16px;
-            box-shadow: 0 10px 40px rgba(16, 185, 129, 0.3);
+            border-radius: 10px; padding: 14px 16px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
             display: flex; align-items: center; justify-content: space-between;
             opacity: 0; pointer-events: none;
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             z-index: 2500;
         }
         #proximity-alert.active { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }
 
-        /* --- AR BUTTON --- */
+        /* --- AUGMENTED REALITY INITIALIZER --- */
         .ar-container {
             position: absolute; bottom: env(safe-area-inset-bottom, 25px);
             left: 50%; transform: translateX(-50%); z-index: 150;
@@ -168,37 +169,37 @@
             background: var(--mg-surface);
             backdrop-filter: blur(12px);
             border: 1px solid var(--mg-mint);
-            color: var(--mg-mint); padding: 12px 26px;
-            border-radius: 30px; font-size: 11px;
-            text-transform: uppercase; font-weight: 800;
-            letter-spacing: 1.5px; cursor: pointer;
-            box-shadow: 0 0 20px var(--accent-glow);
-            transition: 0.3s;
+            color: var(--mg-mint); padding: 11px 24px;
+            border-radius: 8px; font-size: 11px;
+            text-transform: uppercase; font-weight: 700;
+            letter-spacing: 1px; cursor: pointer;
+            transition: 0.2s ease;
         }
-        .ar-btn:active { transform: scale(0.95); }
+        .ar-btn:active { transform: scale(0.97); }
 
-        /* --- SPEC SHEET --- */
+        /* --- TECHNICAL SPECIFICATION DRAWER --- */
         .details-panel { 
-            position: fixed; top: 0; right: -100%; width: 100%; max-width: 350px; height: 100%; 
-            background: rgba(9, 19, 16, 0.97); backdrop-filter: blur(30px);
-            transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1); 
+            position: fixed; top: 0; right: -100%; width: 100%; max-width: 360px; height: 100%; 
+            background: #091310; backdrop-filter: blur(30px);
+            transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1); 
             z-index: 2000; border-left: 1px solid var(--glass-border);
+            box-sizing: border-box;
         }
         .details-panel.active { right: 0; }
-        .spec-content { padding: 50px 24px; }
-        .spec-item { margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; }
+        .spec-content { padding: 48px 24px; }
+        .spec-item { margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); padding-bottom: 12px; }
 
-        /* --- 3D & HOTSPOTS --- */
+        /* --- RENDERER & ANNOTATIONS --- */
         model-viewer { width: 100vw; height: 100vh; background: var(--mg-bg); }
         .Hotspot { 
             background: var(--mg-emerald); border-radius: 50%; width: 12px; height: 12px; 
-            border: 2px solid white; cursor: pointer; transition: 0.3s; 
-            box-shadow: 0 0 12px var(--mg-mint);
+            border: 2px solid #ffffff; cursor: pointer; transition: 0.2s ease; 
+            box-shadow: 0 0 10px var(--mg-mint);
         }
         .Hotspot.hidden { opacity: 0; transform: scale(0); pointer-events: none; }
         .HotspotAnnotation { 
-            background: rgba(5, 46, 22, 0.9); color: var(--mg-soft-green); 
-            padding: 5px 10px; border-radius: 6px; font-size: 10px; 
+            background: rgba(11, 18, 16, 0.95); color: var(--text-main); 
+            padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 500;
             position: absolute; transform: translate(14px, -50%); 
             border: 1px solid var(--mg-emerald); white-space: nowrap; pointer-events: none;
         }
@@ -209,57 +210,57 @@
 <div id="start-screen">
     <div class="radar-container">
         <div class="radar-sweep"></div>
-        <div class="radar-center-node">MIND GARDEN</div>
+        <div class="radar-center-node">GEOSPATIAL ANCHOR</div>
     </div>
-    <div style="max-width:280px; font-size:12px; color:var(--text-dim); margin-bottom:24px; line-height:1.6;">
-        Sensory Sanctuary. Align your location to unearth geo-anchored flora artifacts.
+    <div style="max-width:320px; font-size:12px; color:var(--text-dim); margin-bottom:28px; line-height:1.5;">
+        Mind Garden Spatial Engine. Initializing high-precision WGS84 coordinates and device orientation sensors.
     </div>
-    <button class="commence-btn" onclick="startApp()">Enter Field</button>
+    <button class="commence-btn" onclick="startApp()">Initialize Environment</button>
 </div>
 
 <div class="app-overlay">
     <div class="control-panel">
         <div class="asset-info">
-            <div class="panel-label">Current Anchor</div>
+            <div class="panel-label">Active Spatial Node</div>
             <select id="model-select"></select>
         </div>
         <div class="button-group">
-            <button id="toggle-hotspots" class="ui-btn active">Points</button>
-            <button onclick="document.getElementById('details-panel').classList.add('active')" class="ui-btn primary">Archive</button>
+            <button id="toggle-hotspots" class="ui-btn active">Hotspots</button>
+            <button onclick="document.getElementById('details-panel').classList.add('active')" class="ui-btn primary">Telemetry</button>
         </div>
     </div>
 </div>
 
 <div class="sensor-bar">
     <div class="sensor-chip">
-        <span style="opacity: 0.7;">BEARING</span>
+        <span style="color: var(--text-dim);">AZIMUTH</span>
         <span><span id="heading-val">0</span>° <div id="compass" class="compass-disc"></div></span>
     </div>
     <div class="sensor-chip">
-        <span style="opacity: 0.7;">DISTANCE</span>
-        <span id="distance-val" style="color: var(--mg-mint); font-weight:700;">-- m</span>
+        <span style="color: var(--text-dim);">RADIAL RANGE</span>
+        <span id="distance-val" style="color: var(--mg-mint); font-weight:600;">-- m</span>
     </div>
 </div>
 
 <div id="proximity-alert">
     <div>
-        <div style="font-size:10px; text-transform:uppercase; font-weight:800; color:#052e16;">Proximity Discovered</div>
-        <div id="alert-title" style="font-weight:700; font-size:13px; color:white;">Flora Node Within Range</div>
+        <div style="font-size:9px; text-transform:uppercase; font-weight:700; color:var(--mg-mint); letter-spacing:0.5px;">Proximity Threshold Reached</div>
+        <div id="alert-title" style="font-weight:600; font-size:12px; color:var(--text-main); margin-top:2px;">Asset In Local Perimeter</div>
     </div>
-    <button onclick="dismissAlert()" style="background:#052e16; color:var(--mg-mint); border:none; padding:6px 12px; border-radius:6px; font-weight:700; font-size:10px; cursor:pointer;">ACQUIRE</button>
+    <button onclick="dismissAlert()" style="background:var(--mg-emerald); color:#ffffff; border:none; padding:6px 12px; border-radius:4px; font-weight:600; font-size:10px; cursor:pointer;">ACKNOWLEDGE</button>
 </div>
 
 <div class="ar-container">
-    <button id="ar-button" class="ar-btn">Project into Reality</button>
+    <button id="ar-button" class="ar-btn">Launch Spatial AR</button>
 </div>
 
 <div id="details-panel" class="details-panel">
     <div class="spec-content">
-        <h2 id="asset-title" style="color: var(--mg-mint); font-weight: 300; text-transform: uppercase; margin-bottom:24px; font-size: 1.4rem;">-</h2>
-        <div class="spec-item"><span class="panel-label">Resonance Node</span><span id="spec-crew" style="display:block; margin-top:4px; font-size: 13px;">-</span></div>
-        <div class="spec-item"><span class="panel-label">Coordinates</span><span id="spec-base" style="display:block; margin-top:4px; font-size: 13px;">-</span></div>
-        <div class="spec-item"><span class="panel-label">Flora Spec</span><p id="spec-desc" style="font-size:12px; opacity:0.8; line-height:1.6; margin-top:6px;"></p></div>
-        <button onclick="document.getElementById('details-panel').classList.remove('active')" style="width:100%; background:var(--mg-emerald); color:#052e16; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:700; text-transform:uppercase; margin-top: 20px;">Return</button>
+        <h2 id="asset-title" style="color: var(--mg-mint); font-weight: 400; text-transform: uppercase; margin-bottom:24px; font-size: 1.15rem; letter-spacing:0.5px;">-</h2>
+        <div class="spec-item"><span class="panel-label">Anchor Zone</span><span id="spec-crew" style="display:block; margin-top:4px; font-size: 12px;">-</span></div>
+        <div class="spec-item"><span class="panel-label">Geographic Coordinates</span><span id="spec-base" style="display:block; margin-top:4px; font-size: 12px; font-variant-numeric: tabular-nums;">-</span></div>
+        <div class="spec-item"><span class="panel-label">Technical Overview</span><p id="spec-desc" style="font-size:12px; color:var(--text-dim); line-height:1.5; margin-top:6px;"></p></div>
+        <button onclick="document.getElementById('details-panel').classList.remove('active')" style="width:100%; background:rgba(255,255,255,0.06); color:var(--text-main); border:1px solid var(--glass-border); padding:10px; border-radius:6px; cursor:pointer; font-weight:600; text-transform:uppercase; font-size:11px; margin-top: 16px;">Close Panel</button>
     </div>
 </div>
 
@@ -270,8 +271,8 @@
     ar-scale="auto"
     ar-placement="floor"
     camera-controls 
-    shadow-intensity="1.5" 
-    shadow-softness="1"
+    shadow-intensity="1.2" 
+    shadow-softness="0.8" 
     tone-mapping="neutral" 
     interaction-prompt="none">
     <div slot="ar-button" style="display:none;"></div>
@@ -287,50 +288,62 @@
     const distanceVal = document.querySelector('#distance-val');
     const alertBox = document.querySelector('#proximity-alert');
 
-    // Geo-referenced Garden entities
+    // Spatial Node Registry - 5 Tudor Road, GL7 1AZ anchored at 51.7118° N, 1.9702° W
     const fleetData = [
         {
-            "name": "Lotus of Resonating Clarity",
-            "file": "mind_lotus",
-            "crew": "Inner Core Sanctum",
-            "lat": 51.5074, 
-            "lng": -0.1278,
-            "description": "Construct of geometric serenity. Visualizing thought structures through crystalline petals."
+            "name": "Neural Monolith - Calibration Node",
+            "file": "mind_monolith",
+            "crew": "Cirencester Test Anchor",
+            "lat": 51.7118, 
+            "lng": -1.9702,
+            "description": "Primary geospatial calibration anchor deployed at 5 Tudor Road (GL7 1AZ). Benchmarks ground-plane tracking, spatial coordinate parity, and sensor fusion accuracy."
         },
         {
-            "name": "Bonsai of Neuroplasticity",
+            "name": "Biomorphic Core - Sanctuary Node Alpha",
+            "file": "mind_lotus",
+            "crew": "Regional Sector Alpha",
+            "lat": 51.7145, 
+            "lng": -1.9680,
+            "description": "Geometric vegetation asset designed to assess spatial occlusion algorithms and progressive WebXR surface mesh rendering."
+        },
+        {
+            "name": "Adaptive Root System - Secondary Anchor",
             "file": "mind_bonsai",
-            "crew": "Memory Arboretum",
-            "lat": 51.5080, 
-            "lng": -0.1285,
-            "description": "Adaptive neural branchings modeled through calcified root pathways."
+            "crew": "Regional Sector Beta",
+            "lat": 51.7090, 
+            "lng": -1.9750,
+            "description": "Low-frequency ambient feedback model used to confirm orientation matrix stability and localized drift mitigation."
         }
     ];
 
     const hotspotMap = {
+        "mind_monolith": [
+            { pos: "0m 1.2m 0m", norm: "0m 0m 1m", label: "Datum Baseline Ref" },
+            { pos: "0m 0.2m 0.3m", norm: "0m 1m 0m", label: "Ground Plane Anchor" }
+        ],
         "mind_lotus": [
-            { pos: "0m 0.5m 0m", norm: "0m 1m 0m", label: "Crystalline Nucleus" },
-            { pos: "0.2m 0.2m 0.2m", norm: "1m 0m 0m", label: "Energy Filament" }
+            { pos: "0m 0.5m 0m", norm: "0m 1m 0m", label: "Resonance Apex" },
+            { pos: "0.2m 0.2m 0.2m", norm: "1m 0m 0m", label: "Perimeter Node" }
         ],
         "mind_bonsai": [
-            { pos: "0m 0.8m 0m", norm: "0m 1m 0m", label: "Neural Crest" },
-            { pos: "-0.2m 0.3m 0m", norm: "-1m 0m 0m", label: "Primary Root System" }
+            { pos: "0m 0.8m 0m", norm: "0m 1m 0m", label: "Structural Apex" },
+            { pos: "-0.2m 0.3m 0m", norm: "-1m 0m 0m", label: "Substrate Terminal" }
         ]
     };
 
     let userCoords = null;
     let selectedIdx = 0;
-    const PROXIMITY_THRESHOLD_METERS = 25;
+    const PROXIMITY_THRESHOLD_METERS = 20;
     let notifiedNodes = new Set();
 
     function calculateDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371e3; // Earth radius in meters
+        const R = 6371e3;
         const rad = Math.PI / 180;
         const dLat = (lat2 - lat1) * rad;
         const dLon = (lon2 - lon1) * rad;
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
                   Math.cos(lat1 * rad) * Math.cos(lat2 * rad) *
-                  Math.sin(dLon/2) * Math.sin(dLon/2);
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
         return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
     }
 
@@ -339,7 +352,7 @@
         const currentTarget = fleetData[selectedIdx];
         const dist = calculateDistance(userCoords.latitude, userCoords.longitude, currentTarget.lat, currentTarget.lng);
         
-        distanceVal.innerText = dist > 1000 ? `${(dist / 1000).toFixed(1)} km` : `${Math.round(dist)} m`;
+        distanceVal.innerText = dist >= 1000 ? `${(dist / 1000).toFixed(2)} km` : `${Math.round(dist)} m`;
 
         fleetData.forEach((item, idx) => {
             const d = calculateDistance(userCoords.latitude, userCoords.longitude, item.lat, item.lng);
@@ -351,37 +364,38 @@
     }
 
     function triggerProximityAlert(item, idx) {
-        document.getElementById('alert-title').innerText = `${item.name} unlocked`;
+        document.getElementById('alert-title').innerText = `${item.name}`;
         alertBox.classList.add('active');
-        if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]);
-        playSoundFeedback();
+        if ('vibrate' in navigator) navigator.vibrate([80, 40, 80]);
+        playNotificationTone();
     }
 
     function dismissAlert() {
         alertBox.classList.remove('active');
     }
 
-    function playSoundFeedback() {
+    function playNotificationTone() {
         try {
             const ctx = new (window.AudioContext || window.webkitAudioContext)();
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(528, ctx.currentTime); // 528Hz Solfeggio resonance
-            gain.gain.setValueAtTime(0.1, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.2);
+            osc.frequency.setValueAtTime(440, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
+            gain.gain.setValueAtTime(0.08, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
             osc.connect(gain);
             gain.connect(ctx.destination);
             osc.start();
-            osc.stop(ctx.currentTime + 1.2);
-        } catch(e) {}
+            osc.stop(ctx.currentTime + 0.4);
+        } catch (e) {}
     }
 
     function handleOrientation(e) {
         let heading = null;
         if (e.webkitCompassHeading) {
             heading = e.webkitCompassHeading;
-        } else if (e.alpha) {
+        } else if (e.alpha !== null) {
             heading = 360 - e.alpha;
         }
         if (heading !== null) {
@@ -398,15 +412,17 @@
                     userCoords = pos.coords;
                     checkProximities();
                 },
-                (err) => console.warn('Geolocation access denied', err),
-                { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
+                (err) => console.warn('Geospatial position query failure:', err.message),
+                { enableHighAccuracy: true, maximumAge: 0, timeout: 8000 }
             );
         }
 
         if (window.DeviceOrientationEvent) {
             if (typeof DeviceOrientationEvent.requestPermission === 'function') {
                 DeviceOrientationEvent.requestPermission()
-                    .then(state => { if (state === 'granted') window.addEventListener('deviceorientation', handleOrientation); })
+                    .then(state => { 
+                        if (state === 'granted') window.addEventListener('deviceorientation', handleOrientation); 
+                    })
                     .catch(console.error);
             } else {
                 window.addEventListener('deviceorientation', handleOrientation);
@@ -419,7 +435,7 @@
         const screen = document.getElementById('start-screen');
         screen.style.opacity = '0';
         screen.style.pointerEvents = 'none';
-        setTimeout(() => screen.style.display = 'none', 800);
+        setTimeout(() => screen.style.display = 'none', 600);
     }
 
     function init() {
@@ -434,7 +450,7 @@
         
         document.getElementById('asset-title').innerText = asset.name;
         document.getElementById('spec-crew').innerText = asset.crew;
-        document.getElementById('spec-base').innerText = `${asset.lat.toFixed(4)} N, ${asset.lng.toFixed(4)} E`;
+        document.getElementById('spec-base').innerText = `${asset.lat.toFixed(4)}° N, ${Math.abs(asset.lng).toFixed(4)}° W`;
         document.getElementById('spec-desc').innerText = asset.description;
 
         viewer.querySelectorAll('.Hotspot').forEach(h => h.remove());
@@ -469,7 +485,7 @@
     };
 
     arBtn.onclick = () => viewer.activateAR();
-    select.onchange = (e) => updateAsset(e.target.value);
+    select.onchange = (e) => updateAsset(parseInt(e.target.value, 10));
     window.addEventListener('load', init);
 </script>
 
