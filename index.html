@@ -1,667 +1,477 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gaussian Splat Workflow</title>
+    <title>MIND GARDEN - AR SANCTUARY</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
     
     <style>
         :root {
-            /* Mind Garden Theme Colors */
-            --bg-color: #F4F1EA; /* Soft beige */
-            --panel-bg: #FCFAF6; /* Lighter beige for panels */
-            --accent-color: #4A6B53; /* Earthy green */
-            --accent-hover: #3A5441; /* Darker green */
-            --text-main: #2C352E; /* Deep muted green/gray */
-            --text-muted: #7A857D; /* Soft grayish green */
-            --border-color: #D5D0C5; /* Warm border */
-            --danger-color: #B56B5C; /* Earthy red/terracotta */
-            --success-color: #6E8A73; /* Sage green */
+            --mg-bg: #091310;
+            --mg-surface: rgba(14, 28, 22, 0.65);
+            --mg-emerald: #10b981;
+            --mg-mint: #6ee7b7;
+            --mg-soft-green: #a7f3d0;
+            --glass-border: rgba(110, 231, 183, 0.2);
+            --accent-glow: rgba(16, 185, 129, 0.4);
+            --text-main: #f0fdf4;
+            --text-dim: #a7f3d0;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        body {
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg-color);
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            overflow: hidden; background-color: var(--mg-bg); 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             color: var(--text-main);
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
-            line-height: 1.5;
+            user-select: none;
         }
 
-        nav {
-            display: flex;
-            background-color: var(--panel-bg);
-            border-bottom: 1px solid var(--border-color);
-            height: 64px;
-            flex-shrink: 0;
-            padding: 0 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
-            z-index: 20;
+        /* --- START SCREEN --- */
+        #start-screen { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: radial-gradient(circle at center, #132a22 0%, var(--mg-bg) 100%); 
+            z-index: 3000; display: flex; flex-direction: column; 
+            justify-content: center; align-items: center; 
+            transition: opacity 0.8s ease, visibility 0.8s;
+            text-align: center; padding: 20px; box-sizing: border-box;
         }
 
-        .tab-btn {
-            flex: 1;
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            font-size: 0.95rem;
-            font-weight: 500;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            outline: none;
-            border-bottom: 3px solid transparent;
-            margin: 0 5px;
+        .radar-container {
+            position: relative; width: 220px; height: 220px;
+            display: flex; justify-content: center; align-items: center;
+            margin-bottom: 24px;
         }
 
-        .tab-btn:hover {
-            color: var(--accent-color);
+        .radar-sweep { 
+            position: absolute; width: 100%; height: 100%; border-radius: 50%;
+            background: conic-gradient(from -90deg at 50% 50%, transparent 270deg, var(--accent-glow) 360deg); 
+            animation: sweep 4s linear infinite; 
+            border: 1px dashed var(--glass-border);
         }
+        @keyframes sweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-        .tab-btn.active {
-            color: var(--accent-color);
-            border-bottom-color: var(--accent-color);
-            font-weight: 600;
-        }
-
-        .tab-content {
-            display: none;
-            flex: 1;
-            position: relative;
-            height: calc(100vh - 64px);
-            overflow: hidden;
-        }
-
-        .tab-content.active {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .btn {
-            padding: 14px 28px;
-            border-radius: 6px;
-            border: 1px solid transparent;
-            font-size: 1rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            color: #fff;
-            text-align: center;
-            text-decoration: none;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-
-        .btn-primary { 
-            background-color: var(--accent-color); 
-        }
-        
-        .btn-primary:hover { 
-            background-color: var(--accent-hover); 
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-        
-        .btn-primary:disabled { 
-            background-color: var(--border-color); 
-            color: var(--text-muted); 
-            cursor: not-allowed; 
-            box-shadow: none;
-        }
-        
-        .btn-danger { 
-            background-color: var(--danger-color); 
-        }
-
-        #video-container {
-            position: relative;
-            width: 100%;
-            flex: 1;
-            background-color: #111; /* Keep video background dark to frame the feed */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        #webcam-feed {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: none; /* Hidden until started */
-        }
-
-        .reticle {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 250px;
-            height: 250px;
-            border: 1.5px dashed rgba(255, 255, 255, 0.4);
-            border-radius: 12px;
-            pointer-events: none;
-            display: none;
-        }
-
-        #camera-init-overlay {
-            position: absolute;
-            inset: 0;
-            background: var(--bg-color);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-            padding: 20px;
-            text-align: center;
-        }
-
-        .capture-controls {
-            position: absolute;
-            bottom: 40px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            align-items: center;
-            background: rgba(252, 250, 246, 0.9); /* Translucent Mind Garden panel */
-            padding: 20px 30px;
-            border-radius: 12px;
+        .radar-center-node {
+            z-index: 3002; background: rgba(16, 185, 129, 0.15); 
+            color: var(--mg-mint); padding: 12px 18px; font-weight: 700; 
+            letter-spacing: 2px; border-radius: 50px; font-size: 11px;
+            border: 1px solid var(--mg-emerald);
             backdrop-filter: blur(8px);
-            border: 1px solid var(--border-color);
-            display: none;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            box-shadow: 0 0 20px var(--accent-glow);
         }
 
-        #recording-indicator {
-            display: none;
-            color: var(--danger-color);
-            font-weight: 600;
-            letter-spacing: 1px;
-            animation: pulse 1.5s infinite;
+        .commence-btn { 
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.05)); 
+            color: var(--mg-mint); border: 1px solid var(--mg-emerald); 
+            padding: 14px 32px; border-radius: 30px; cursor: pointer; 
+            font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+            font-size: 11px; z-index: 3001; transition: 0.3s;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        .commence-btn:active { transform: scale(0.96); }
+
+        /* --- SENSOR & COMPASS HUD --- */
+        .sensor-bar {
+            position: absolute; top: calc(env(safe-area-inset-top, 10px) + 75px);
+            left: 50%; transform: translateX(-50%);
+            width: 94%; max-width: 500px; z-index: 90;
+            display: flex; justify-content: space-between; gap: 8px;
         }
 
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.4; }
-            100% { opacity: 1; }
+        .sensor-chip {
+            background: var(--mg-surface);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(16px);
+            border-radius: 8px; padding: 6px 12px;
+            flex: 1; display: flex; align-items: center; justify-content: space-between;
+            font-size: 11px; font-variant-numeric: tabular-nums;
         }
 
-        .process-container {
-            padding: 40px 20px;
-            max-width: 600px;
-            margin: 0 auto;
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            gap: 24px;
-            overflow-y: auto;
+        .compass-disc {
+            width: 14px; height: 14px; border-radius: 50%;
+            border: 1px solid var(--mg-mint); display: inline-block;
+            position: relative; transition: transform 0.1s linear;
+        }
+        .compass-disc::after {
+            content: ''; position: absolute; top: 1px; left: 6px;
+            width: 2px; height: 5px; background: var(--mg-emerald);
         }
 
-        .process-header {
-            text-align: center;
-            margin-bottom: 20px;
+        /* --- CONTROL PANEL --- */
+        .app-overlay { 
+            position: absolute; top: env(safe-area-inset-top, 15px); 
+            left: 50%; transform: translateX(-50%); 
+            width: 94%; max-width: 500px; z-index: 100; 
         }
 
-        .process-header h2 {
-            font-weight: 400;
-            color: var(--accent-color);
-            letter-spacing: -0.5px;
+        .control-panel { 
+            background: var(--mg-surface); 
+            backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+            border: 1px solid var(--glass-border); 
+            padding: 10px 14px; border-radius: 16px; 
+            display: flex; justify-content: space-between; align-items: center;
+            gap: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
-        .process-step {
-            background-color: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+        .asset-info { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+
+        .panel-label { 
+            font-size: 8px; color: var(--mg-mint); 
+            text-transform: uppercase; font-weight: 800; 
+            letter-spacing: 1px; margin-bottom: 2px; 
         }
 
-        .step-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 12px;
-            font-weight: 500;
-            font-size: 0.95rem;
+        select { 
+            background: transparent; color: var(--text-main); border: none; 
+            font-weight: 600; font-size: 13px; outline: none; 
+            cursor: pointer; width: 100%;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        select option { background-color: #0d1e17; color: var(--text-main); }
+        
+        .button-group { display: flex; gap: 6px; flex-shrink: 0; }
+
+        .ui-btn {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main); border: 1px solid var(--glass-border);
+            padding: 8px 12px; border-radius: 8px;
+            font-weight: 700; cursor: pointer;
+            font-size: 10px; text-transform: uppercase;
+            transition: 0.2s; white-space: nowrap;
+        }
+        .ui-btn.active { background: var(--mg-emerald); border-color: var(--mg-mint); color: #052e16; }
+        .ui-btn.primary { background: rgba(16, 185, 129, 0.2); border-color: var(--mg-emerald); color: var(--mg-mint); }
+
+        /* --- PROXIMITY NOTIFICATION MODAL --- */
+        #proximity-alert {
+            position: fixed; top: 130px; left: 50%; transform: translateX(-50%) translateY(-20px);
+            width: 90%; max-width: 440px;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.95), rgba(5, 46, 22, 0.95));
+            border: 1px solid var(--mg-mint);
+            border-radius: 12px; padding: 14px 16px;
+            box-shadow: 0 10px 40px rgba(16, 185, 129, 0.3);
+            display: flex; align-items: center; justify-content: space-between;
+            opacity: 0; pointer-events: none;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 2500;
+        }
+        #proximity-alert.active { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }
+
+        /* --- AR BUTTON --- */
+        .ar-container {
+            position: absolute; bottom: env(safe-area-inset-bottom, 25px);
+            left: 50%; transform: translateX(-50%); z-index: 150;
         }
 
-        .progress-bar-container {
-            width: 100%;
-            height: 8px;
-            background-color: var(--border-color);
-            border-radius: 4px;
-            overflow: hidden;
+        .ar-btn {
+            background: var(--mg-surface);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--mg-mint);
+            color: var(--mg-mint); padding: 12px 26px;
+            border-radius: 30px; font-size: 11px;
+            text-transform: uppercase; font-weight: 800;
+            letter-spacing: 1.5px; cursor: pointer;
+            box-shadow: 0 0 20px var(--accent-glow);
+            transition: 0.3s;
         }
+        .ar-btn:active { transform: scale(0.95); }
 
-        .progress-bar {
-            height: 100%;
-            width: 0%;
-            background-color: var(--accent-color);
-            transition: width 0.3s ease;
+        /* --- SPEC SHEET --- */
+        .details-panel { 
+            position: fixed; top: 0; right: -100%; width: 100%; max-width: 350px; height: 100%; 
+            background: rgba(9, 19, 16, 0.97); backdrop-filter: blur(30px);
+            transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1); 
+            z-index: 2000; border-left: 1px solid var(--glass-border);
         }
+        .details-panel.active { right: 0; }
+        .spec-content { padding: 50px 24px; }
+        .spec-item { margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; }
 
-        .progress-bar.success { background-color: var(--success-color); }
-
-        #viewer-container {
-            flex: 1;
-            position: relative;
-            width: 100%;
-            background-color: var(--bg-color); /* Light background for garden theme */
+        /* --- 3D & HOTSPOTS --- */
+        model-viewer { width: 100vw; height: 100vh; background: var(--mg-bg); }
+        .Hotspot { 
+            background: var(--mg-emerald); border-radius: 50%; width: 12px; height: 12px; 
+            border: 2px solid white; cursor: pointer; transition: 0.3s; 
+            box-shadow: 0 0 12px var(--mg-mint);
         }
-
-        .viewer-controls {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 10;
-            background: rgba(252, 250, 246, 0.85);
-            padding: 16px;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            backdrop-filter: blur(8px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        }
-
-        .viewer-controls input[type="file"] {
-            display: none;
-        }
-
-        .file-upload-label {
-            display: inline-block;
-            background-color: var(--accent-color);
-            color: #fff;
-            padding: 10px 18px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            font-weight: 500;
-            transition: background 0.2s;
-        }
-
-        .file-upload-label:hover {
-            background-color: var(--accent-hover);
-        }
-
-        #viewer-status {
-            margin-top: 12px;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-        }
-
-        #message-box {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: var(--panel-bg);
-            border-left: 4px solid var(--accent-color);
-            color: var(--text-main);
-            padding: 15px 20px;
-            border-radius: 4px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-            display: none;
-            z-index: 1000;
-            font-size: 0.9rem;
+        .Hotspot.hidden { opacity: 0; transform: scale(0); pointer-events: none; }
+        .HotspotAnnotation { 
+            background: rgba(5, 46, 22, 0.9); color: var(--mg-soft-green); 
+            padding: 5px 10px; border-radius: 6px; font-size: 10px; 
+            position: absolute; transform: translate(14px, -50%); 
+            border: 1px solid var(--mg-emerald); white-space: nowrap; pointer-events: none;
         }
     </style>
 </head>
 <body>
 
-    <nav>
-        <button class="tab-btn active" data-target="capture-tab">Capture</button>
-        <button class="tab-btn" data-target="process-tab">Process</button>
-        <button class="tab-btn" data-target="view-tab">View</button>
-    </nav>
+<div id="start-screen">
+    <div class="radar-container">
+        <div class="radar-sweep"></div>
+        <div class="radar-center-node">MIND GARDEN</div>
+    </div>
+    <div style="max-width:280px; font-size:12px; color:var(--text-dim); margin-bottom:24px; line-height:1.6;">
+        Sensory Sanctuary. Align your location to unearth geo-anchored flora artifacts.
+    </div>
+    <button class="commence-btn" onclick="startApp()">Enter Field</button>
+</div>
 
-    <!-- Capture Tab -->
-    <div id="capture-tab" class="tab-content active">
-        <div id="video-container">
-            <!-- Mobile Fix: playsinline, autoplay, muted are required -->
-            <video id="webcam-feed" autoplay playsinline muted></video>
-            <div class="reticle" id="reticle"></div>
-            
-            <div id="camera-init-overlay">
-                <h2 style="margin-bottom: 10px; font-weight: 400;">Dataset Capture</h2>
-                <p style="color: var(--text-muted); margin-bottom: 30px; font-size: 0.9rem; max-width: 300px;">
-                    Ensure your subject is well lit. Orbit smoothly around the object to capture all angles.
-                </p>
-                <!-- Mobile Fix: Explicit user interaction required to start camera -->
-                <button id="init-cam-btn" class="btn btn-primary">Start Camera</button>
-                <div id="camera-error" style="display: none; color: var(--danger-color); font-size: 0.9rem; margin-top: 20px;"></div>
-            </div>
-
-            <div class="capture-controls" id="capture-controls">
-                <div id="recording-indicator">● RECORDING</div>
-                <button id="record-btn" class="btn btn-primary">Start Recording</button>
-                <a id="download-link" class="btn btn-primary" style="display: none; background-color: var(--success-color);">Download Video</a>
-            </div>
+<div class="app-overlay">
+    <div class="control-panel">
+        <div class="asset-info">
+            <div class="panel-label">Current Anchor</div>
+            <select id="model-select"></select>
+        </div>
+        <div class="button-group">
+            <button id="toggle-hotspots" class="ui-btn active">Points</button>
+            <button onclick="document.getElementById('details-panel').classList.add('active')" class="ui-btn primary">Archive</button>
         </div>
     </div>
+</div>
 
-    <!-- Process Tab -->
-    <div id="process-tab" class="tab-content">
-        <div class="process-container">
-            <div class="process-header">
-                <h2>Processing Pipeline</h2>
-                <p style="color: var(--text-muted); margin-top: 8px; font-size: 0.9rem;">Simulated backend splat generation</p>
-            </div>
-
-            <div class="process-step">
-                <div class="step-header">
-                    <span>1. Frame Extraction & Masking</span>
-                    <span id="status-1">Pending</span>
-                </div>
-                <div class="progress-bar-container">
-                    <div id="progress-1" class="progress-bar"></div>
-                </div>
-            </div>
-
-            <div class="process-step">
-                <div class="step-header">
-                    <span>2. Structure from Motion (SfM)</span>
-                    <span id="status-2">Pending</span>
-                </div>
-                <div class="progress-bar-container">
-                    <div id="progress-2" class="progress-bar"></div>
-                </div>
-            </div>
-
-            <div class="process-step">
-                <div class="step-header">
-                    <span>3. Gaussian Optimization</span>
-                    <span id="status-3">Pending</span>
-                </div>
-                <div class="progress-bar-container">
-                    <div id="progress-3" class="progress-bar"></div>
-                </div>
-            </div>
-
-            <button id="start-process-btn" class="btn btn-primary" style="margin-top: 10px;">Start Processing</button>
-        </div>
+<div class="sensor-bar">
+    <div class="sensor-chip">
+        <span style="opacity: 0.7;">BEARING</span>
+        <span><span id="heading-val">0</span>° <div id="compass" class="compass-disc"></div></span>
     </div>
-
-    <!-- View Tab -->
-    <div id="view-tab" class="tab-content">
-        <div id="viewer-container">
-            <!-- WebGL Canvas injected by library -->
-            <div class="viewer-controls">
-                <label class="file-upload-label">
-                    Load Local .splat
-                    <input type="file" id="splat-file-input" accept=".splat">
-                </label>
-                <div id="viewer-status">Waiting to initialize...</div>
-            </div>
-        </div>
+    <div class="sensor-chip">
+        <span style="opacity: 0.7;">DISTANCE</span>
+        <span id="distance-val" style="color: var(--mg-mint); font-weight:700;">-- m</span>
     </div>
+</div>
 
-    <div id="message-box"></div>
+<div id="proximity-alert">
+    <div>
+        <div style="font-size:10px; text-transform:uppercase; font-weight:800; color:#052e16;">Proximity Discovered</div>
+        <div id="alert-title" style="font-weight:700; font-size:13px; color:white;">Flora Node Within Range</div>
+    </div>
+    <button onclick="dismissAlert()" style="background:#052e16; color:var(--mg-mint); border:none; padding:6px 12px; border-radius:6px; font-weight:700; font-size:10px; cursor:pointer;">ACQUIRE</button>
+</div>
 
-    <script type="module">
-        import * as GaussianSplats3D from 'https://unpkg.com/@mkkellogg/gaussian-splats-3d@0.4.2/build/gaussian-splats-3d.module.js';
+<div class="ar-container">
+    <button id="ar-button" class="ar-btn">Project into Reality</button>
+</div>
 
-        // --- Utility ---
-        function showMessage(msg) {
-            const box = document.getElementById('message-box');
-            box.innerText = msg;
-            box.style.display = 'block';
-            setTimeout(() => { box.style.display = 'none'; }, 3500);
+<div id="details-panel" class="details-panel">
+    <div class="spec-content">
+        <h2 id="asset-title" style="color: var(--mg-mint); font-weight: 300; text-transform: uppercase; margin-bottom:24px; font-size: 1.4rem;">-</h2>
+        <div class="spec-item"><span class="panel-label">Resonance Node</span><span id="spec-crew" style="display:block; margin-top:4px; font-size: 13px;">-</span></div>
+        <div class="spec-item"><span class="panel-label">Coordinates</span><span id="spec-base" style="display:block; margin-top:4px; font-size: 13px;">-</span></div>
+        <div class="spec-item"><span class="panel-label">Flora Spec</span><p id="spec-desc" style="font-size:12px; opacity:0.8; line-height:1.6; margin-top:6px;"></p></div>
+        <button onclick="document.getElementById('details-panel').classList.remove('active')" style="width:100%; background:var(--mg-emerald); color:#052e16; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:700; text-transform:uppercase; margin-top: 20px;">Return</button>
+    </div>
+</div>
+
+<model-viewer 
+    id="main-viewer" 
+    ar 
+    ar-modes="webxr scene-viewer quick-look" 
+    ar-scale="auto"
+    ar-placement="floor"
+    camera-controls 
+    shadow-intensity="1.5" 
+    shadow-softness="1"
+    tone-mapping="neutral" 
+    interaction-prompt="none">
+    <div slot="ar-button" style="display:none;"></div>
+</model-viewer>
+
+<script>
+    const viewer = document.querySelector('#main-viewer');
+    const select = document.querySelector('#model-select');
+    const hotspotBtn = document.querySelector('#toggle-hotspots');
+    const arBtn = document.querySelector('#ar-button');
+    const compassEl = document.querySelector('#compass');
+    const headingVal = document.querySelector('#heading-val');
+    const distanceVal = document.querySelector('#distance-val');
+    const alertBox = document.querySelector('#proximity-alert');
+
+    // Geo-referenced Garden entities
+    const fleetData = [
+        {
+            "name": "Lotus of Resonating Clarity",
+            "file": "mind_lotus",
+            "crew": "Inner Core Sanctum",
+            "lat": 51.5074, 
+            "lng": -0.1278,
+            "description": "Construct of geometric serenity. Visualizing thought structures through crystalline petals."
+        },
+        {
+            "name": "Bonsai of Neuroplasticity",
+            "file": "mind_bonsai",
+            "crew": "Memory Arboretum",
+            "lat": 51.5080, 
+            "lng": -0.1285,
+            "description": "Adaptive neural branchings modeled through calcified root pathways."
         }
+    ];
 
-        // --- Tab Switching Logic ---
-        const tabBtns = document.querySelectorAll('.tab-btn');
-        const tabContents = document.querySelectorAll('.tab-content');
+    const hotspotMap = {
+        "mind_lotus": [
+            { pos: "0m 0.5m 0m", norm: "0m 1m 0m", label: "Crystalline Nucleus" },
+            { pos: "0.2m 0.2m 0.2m", norm: "1m 0m 0m", label: "Energy Filament" }
+        ],
+        "mind_bonsai": [
+            { pos: "0m 0.8m 0m", norm: "0m 1m 0m", label: "Neural Crest" },
+            { pos: "-0.2m 0.3m 0m", norm: "-1m 0m 0m", label: "Primary Root System" }
+        ]
+    };
 
-        tabBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const targetId = btn.getAttribute('data-target');
-                
-                tabBtns.forEach(b => b.classList.remove('active'));
-                tabContents.forEach(c => c.classList.remove('active'));
-                
-                btn.classList.add('active');
-                document.getElementById(targetId).classList.add('active');
+    let userCoords = null;
+    let selectedIdx = 0;
+    const PROXIMITY_THRESHOLD_METERS = 25;
+    let notifiedNodes = new Set();
 
-                // Initialize viewer only when tab is opened to save resources
-                if(targetId === 'view-tab' && !viewerInitialized) {
-                    initViewer();
-                }
-            });
-        });
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371e3; // Earth radius in meters
+        const rad = Math.PI / 180;
+        const dLat = (lat2 - lat1) * rad;
+        const dLon = (lon2 - lon1) * rad;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(lat1 * rad) * Math.cos(lat2 * rad) *
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+        return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+    }
 
-        const videoElement = document.getElementById('webcam-feed');
-        const initCamBtn = document.getElementById('init-cam-btn');
-        const overlay = document.getElementById('camera-init-overlay');
-        const controls = document.getElementById('capture-controls');
-        const reticle = document.getElementById('reticle');
-        const recordBtn = document.getElementById('record-btn');
-        const downloadLink = document.getElementById('download-link');
-        const recordingIndicator = document.getElementById('recording-indicator');
-        const cameraError = document.getElementById('camera-error');
-
-        let mediaStream = null;
-        let mediaRecorder = null;
-        let recordedChunks = [];
-        let isRecording = false;
-
-        initCamBtn.addEventListener('click', async () => {
-            try {
-                initCamBtn.disabled = true;
-                initCamBtn.innerText = "Requesting Access...";
-                
-                // Mobile fix: Explicit constraints for back camera, loose on resolution
-                const constraints = {
-                    video: { facingMode: { ideal: "environment" } },
-                    audio: false
-                };
-
-                mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
-                videoElement.srcObject = mediaStream;
-                
-                // Once stream plays, hide overlay and show controls
-                videoElement.onloadedmetadata = () => {
-                    videoElement.play();
-                    videoElement.style.display = 'block';
-                    overlay.style.display = 'none';
-                    controls.style.display = 'flex';
-                    reticle.style.display = 'block';
-                };
-            } catch (err) {
-                console.error("Camera access failed", err);
-                cameraError.style.display = 'block';
-                cameraError.innerText = "Camera access denied. Please check permissions.";
-                initCamBtn.innerText = "Start Camera";
-                initCamBtn.disabled = false;
-            }
-        });
-
-        recordBtn.addEventListener('click', () => {
-            if (!isRecording) {
-                recordedChunks = [];
-                // Let browser choose default supported format (fixes iOS unsupported mime type crash)
-                try {
-                    mediaRecorder = new MediaRecorder(mediaStream);
-                } catch (e) {
-                    showMessage("Recording API not supported in this browser.");
-                    return;
-                }
-
-                mediaRecorder.ondataavailable = (e) => {
-                    if (e.data.size > 0) recordedChunks.push(e.data);
-                };
-
-                mediaRecorder.onstop = () => {
-                    // Create generic video blob, will inherit recorder's chosen format (mp4/webm)
-                    const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || 'video/mp4' });
-                    const url = URL.createObjectURL(blob);
-                    
-                    // Determine extension based on chosen mime type
-                    const ext = (mediaRecorder.mimeType && mediaRecorder.mimeType.includes('webm')) ? 'webm' : 'mp4';
-                    
-                    downloadLink.href = url;
-                    downloadLink.download = `splat_dataset_${Date.now()}.${ext}`;
-                    downloadLink.style.display = 'inline-block';
-                    showMessage("Capture complete. Ready to download/process.");
-                };
-
-                mediaRecorder.start(200);
-                isRecording = true;
-                recordBtn.innerText = "Stop Recording";
-                recordBtn.classList.replace('btn-primary', 'btn-danger');
-                recordingIndicator.style.display = 'block';
-                downloadLink.style.display = 'none';
-
-            } else {
-                mediaRecorder.stop();
-                isRecording = false;
-                recordBtn.innerText = "Start Recording";
-                recordBtn.classList.replace('btn-danger', 'btn-primary');
-                recordingIndicator.style.display = 'none';
-            }
-        });
-
-        const startProcessBtn = document.getElementById('start-process-btn');
+    function checkProximities() {
+        if (!userCoords) return;
+        const currentTarget = fleetData[selectedIdx];
+        const dist = calculateDistance(userCoords.latitude, userCoords.longitude, currentTarget.lat, currentTarget.lng);
         
-        async function animateProgress(id, duration, statusText) {
-            return new Promise(resolve => {
-                const bar = document.getElementById(`progress-${id}`);
-                const status = document.getElementById(`status-${id}`);
-                
-                status.innerText = "Processing...";
-                status.style.color = "var(--accent-color)";
-                bar.classList.remove('success');
-                
-                let start = null;
-                
-                function step(timestamp) {
-                    if (!start) start = timestamp;
-                    const progress = timestamp - start;
-                    const percentage = Math.min((progress / duration) * 100, 100);
-                    
-                    bar.style.width = percentage + '%';
-                    
-                    if (progress < duration) {
-                        window.requestAnimationFrame(step);
-                    } else {
-                        status.innerText = statusText;
-                        status.style.color = "var(--success-color)";
-                        bar.classList.add('success');
-                        resolve();
-                    }
-                }
-                
-                window.requestAnimationFrame(step);
-            });
-        }
+        distanceVal.innerText = dist > 1000 ? `${(dist / 1000).toFixed(1)} km` : `${Math.round(dist)} m`;
 
-        startProcessBtn.addEventListener('click', async () => {
-            startProcessBtn.disabled = true;
-            startProcessBtn.innerText = "Pipeline Running...";
-            
-            // Reset
-            for(let i=1; i<=3; i++) {
-                document.getElementById(`progress-${i}`).style.width = '0%';
-                document.getElementById(`status-${i}`).innerText = 'Pending';
-                document.getElementById(`status-${i}`).style.color = 'var(--text-muted)';
+        fleetData.forEach((item, idx) => {
+            const d = calculateDistance(userCoords.latitude, userCoords.longitude, item.lat, item.lng);
+            if (d <= PROXIMITY_THRESHOLD_METERS && !notifiedNodes.has(item.name)) {
+                notifiedNodes.add(item.name);
+                triggerProximityAlert(item, idx);
             }
-
-            await animateProgress(1, 1500, "Masks generated (120 frames)");
-            await animateProgress(2, 3000, "Sparse point cloud complete");
-            await animateProgress(3, 4000, "Splat generated successfully");
-
-            startProcessBtn.innerText = "Processing Complete";
-            showMessage("Mock processing finished. Ready to view.");
-            
-            setTimeout(() => {
-                startProcessBtn.disabled = false;
-                startProcessBtn.innerText = "Restart Pipeline";
-            }, 3000);
         });
+    }
 
-        let viewerInitialized = false;
-        let splatViewer = null;
-        const viewerStatus = document.getElementById('viewer-status');
-        const fileInput = document.getElementById('splat-file-input');
+    function triggerProximityAlert(item, idx) {
+        document.getElementById('alert-title').innerText = `${item.name} unlocked`;
+        alertBox.classList.add('active');
+        if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]);
+        playSoundFeedback();
+    }
 
-        function initViewer() {
-            viewerInitialized = true;
-            
-            // Setting a light background color for the Mind Garden theme
-            splatViewer = new GaussianSplats3D.Viewer({
-                'rootElement': document.getElementById('viewer-container'),
-                'cameraUp': [0, -1, -0.6],
-                'initialCameraPosition': [-1, -4, 6],
-                'initialCameraLookAt': [0, 4, 0],
-                'halfPrecision': true, // Better for mobile/web
-                'backgroundColor': '#F4F1EA' // Mind Garden beige
-            });
+    function dismissAlert() {
+        alertBox.classList.remove('active');
+    }
 
-            // Reliable external sample hosted on HuggingFace
-            const sampleUrl = 'https://huggingface.co/cakewalk/splat-data/resolve/main/train.splat';
-            
-            viewerStatus.innerText = "Loading default scene...";
-            
-            splatViewer.addSplatScene(sampleUrl, {
-                'splatAlphaCrop': 0.2,
-                'showLoadingUI': true
-            }).then(() => {
-                splatViewer.start();
-                viewerStatus.innerText = "Ready. Orbit: 1-Finger Drag | Pan: 2-Finger Drag";
-            }).catch(err => {
-                console.error("Failed to load sample:", err);
-                viewerStatus.innerText = "Failed to load default scene. Upload a .splat file.";
-            });
+    function playSoundFeedback() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(528, ctx.currentTime); // 528Hz Solfeggio resonance
+            gain.gain.setValueAtTime(0.1, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.2);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 1.2);
+        } catch(e) {}
+    }
+
+    function handleOrientation(e) {
+        let heading = null;
+        if (e.webkitCompassHeading) {
+            heading = e.webkitCompassHeading;
+        } else if (e.alpha) {
+            heading = 360 - e.alpha;
+        }
+        if (heading !== null) {
+            const deg = Math.round(heading);
+            headingVal.innerText = deg;
+            compassEl.style.transform = `rotate(${deg}deg)`;
+        }
+    }
+
+    function initSensors() {
+        if ('geolocation' in navigator) {
+            navigator.geolocation.watchPosition(
+                (pos) => {
+                    userCoords = pos.coords;
+                    checkProximities();
+                },
+                (err) => console.warn('Geolocation access denied', err),
+                { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
+            );
         }
 
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+        if (window.DeviceOrientationEvent) {
+            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then(state => { if (state === 'granted') window.addEventListener('deviceorientation', handleOrientation); })
+                    .catch(console.error);
+            } else {
+                window.addEventListener('deviceorientation', handleOrientation);
+            }
+        }
+    }
 
-            const url = URL.createObjectURL(file);
-            viewerStatus.innerText = `Loading ${file.name}...`;
+    function startApp() {
+        initSensors();
+        const screen = document.getElementById('start-screen');
+        screen.style.opacity = '0';
+        screen.style.pointerEvents = 'none';
+        setTimeout(() => screen.style.display = 'none', 800);
+    }
 
-            // Completely rebuild UI container for new viewer instance
-            document.getElementById('viewer-container').innerHTML = `
-                <div class="viewer-controls">
-                    <label class="file-upload-label">
-                        Load Local .splat
-                        <input type="file" id="splat-file-input" accept=".splat">
-                    </label>
-                    <div id="viewer-status">Loading local file...</div>
-                </div>
-            `;
-            
-            // Re-bind file listener after DOM replacement
-            document.getElementById('splat-file-input').addEventListener('change', arguments.callee);
-            
-            splatViewer = new GaussianSplats3D.Viewer({
-                'rootElement': document.getElementById('viewer-container'),
-                'cameraUp': [0, -1, -0.6],
-                'initialCameraPosition': [-1, -4, 6],
-                'initialCameraLookAt': [0, 4, 0],
-                'backgroundColor': '#F4F1EA'
-            });
+    function init() {
+        select.innerHTML = fleetData.map((m, i) => `<option value="${i}">${m.name.toUpperCase()}</option>`).join('');
+        updateAsset(0);
+    }
 
-            splatViewer.addSplatScene(url, {
-                'showLoadingUI': true
-            }).then(() => {
-                splatViewer.start();
-                document.getElementById('viewer-status').innerText = `Loaded: ${file.name}`;
-                URL.revokeObjectURL(url); 
-            }).catch(err => {
-                console.error("Error loading local file:", err);
-                document.getElementById('viewer-status').innerText = "Error loading file. Check console.";
-            });
+    function updateAsset(idx) {
+        selectedIdx = idx;
+        const asset = fleetData[idx];
+        viewer.src = `models/${asset.file}.glb`;
+        
+        document.getElementById('asset-title').innerText = asset.name;
+        document.getElementById('spec-crew').innerText = asset.crew;
+        document.getElementById('spec-base').innerText = `${asset.lat.toFixed(4)} N, ${asset.lng.toFixed(4)} E`;
+        document.getElementById('spec-desc').innerText = asset.description;
+
+        viewer.querySelectorAll('.Hotspot').forEach(h => h.remove());
+
+        viewer.addEventListener('load', () => {
+            const points = hotspotMap[asset.file];
+            if (points) {
+                points.forEach((p, i) => {
+                    const b = document.createElement('button');
+                    b.className = `Hotspot ${hotspotBtn.classList.contains('active') ? '' : 'hidden'}`;
+                    b.slot = `hotspot-${i}`;
+                    b.setAttribute('data-position', p.pos);
+                    b.setAttribute('data-normal', p.norm);
+                    b.innerHTML = `<div class="HotspotAnnotation">${p.label}</div>`;
+                    b.onclick = () => {
+                        viewer.cameraTarget = p.pos;
+                        viewer.cameraOrbit = "45deg 75deg 2.5m";
+                    };
+                    viewer.appendChild(b);
+                });
+            }
+        }, { once: true });
+
+        checkProximities();
+    }
+
+    hotspotBtn.onclick = () => {
+        const isActive = hotspotBtn.classList.toggle('active');
+        viewer.querySelectorAll('.Hotspot').forEach(h => {
+            isActive ? h.classList.remove('hidden') : h.classList.add('hidden');
         });
+    };
 
-    </script>
+    arBtn.onclick = () => viewer.activateAR();
+    select.onchange = (e) => updateAsset(e.target.value);
+    window.addEventListener('load', init);
+</script>
+
 </body>
 </html>
