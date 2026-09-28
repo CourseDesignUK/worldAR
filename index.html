@@ -268,7 +268,6 @@ html, body {
   color: var(--text-muted);
 }
 
-/* Center Reticle / Target for AR view */
 .hud-center {
   align-self: center;
   pointer-events: none;
@@ -309,7 +308,6 @@ html, body {
   letter-spacing: 0.05em;
 }
 
-/* Bottom Controls */
 .hud-bottom {
   display: flex;
   gap: 10px;
@@ -350,7 +348,6 @@ html, body {
 </head>
 <body>
 
-<!-- 1. FULLSCREEN SPARK SPLASH SCREEN -->
 <div id="splash-screen">
   <div class="radar-wrapper">
     <div class="radar-sweep"></div>
@@ -363,12 +360,9 @@ html, body {
   <button class="launch-btn" onclick="initializeEngine()">Initialize System</button>
 </div>
 
-<!-- 2. FULL VIEWPORT (MAP / AR) -->
 <div id="view-container">
-  <!-- Map Interface -->
   <div id="map-view"></div>
 
-  <!-- Real-World AR Camera Interface -->
   <div id="ar-view">
     <a-scene
       embedded
@@ -381,9 +375,7 @@ html, body {
   </div>
 </div>
 
-<!-- 3. FLOATING TACTICAL HUD -->
 <div class="hud-layer">
-  <!-- Top Bar -->
   <div class="hud-top">
     <div class="hud-pill">
       <div class="pulse-dot"></div>
@@ -401,13 +393,11 @@ html, body {
     </div>
   </div>
 
-  <!-- Center Status / AR Reticle -->
   <div class="hud-center">
     <div class="ar-reticle" id="arReticle"></div>
-    <div class="target-banner" id="targetBanner">Target: Cat 10 Rig (Standby)</div>
+    <div class="target-banner" id="targetBanner">Loading Simulators...</div>
   </div>
 
-  <!-- Bottom Action Dock -->
   <div class="hud-bottom">
     <button id="btnToggleView" class="hud-btn primary">Switch to AR Camera</button>
     <button id="btnRecenter" class="hud-btn">Center Me</button>
@@ -432,21 +422,21 @@ html, body {
   };
 
   let map = null, userMarker = null, userCoords = null;
-  let activeMode = 'MAP'; // 'MAP' | 'AR'
+  let activeMode = 'MAP';
+  let simulators = [];
   const originLat = 51.9943, originLon = -1.6823;
 
-  const simulators = [
-    { id: "sim-2", name: "Cat 10 Rig", lat: 51.996011, lng: -1.683188, model: "models/rig.glb", scale: "1 1 1" },
-    { id: "sim-3", name: "ARFF Rig C-17", lat: 51.998301, lng: -1.678853, model: "models/arff.glb", scale: "1 1 1" },
-    { id: "sim-4", name: "Merlin Sim", lat: 51.996062, lng: -1.682645, model: "models/merlin.glb", scale: "1 1 1" },
-    { id: "sim-5", name: "Industrial A", lat: 51.995723, lng: -1.677712, model: "models/IndA.glb", scale: "1 1 1" },
-    { id: "sim-6", name: "Cessna", lat: 52.000157, lng: -1.678911, model: "models/cessna.glb", scale: "1 1 1" },
-    { id: "sim-7", name: "Tornado", lat: 51.998965, lng: -1.678473, model: "models/f3.glb", scale: "1 1 1" },
-    { id: "sim-8", name: "Lynx helicopter", lat: 52.000487, lng: -1.677733, model: "models/lynx.glb", scale: "1 1 1" },
-    { id: "sim-9", name: "Drill tower", lat: 51.995679, lng: -1.678509, model: "models/mdt.glb", scale: "1 1 1" },
-    { id: "sim-10", name: "USAR Building", lat: 51.995794, lng: -1.674954, model: "models/usar.glb", scale: "1 1 1" },
-    { id: "sim-11", name: "Gym", lat: 51.991110, lng: -1.676447, model: "models/gym.glb", scale: "1 1 1" }
-  ];
+  async function loadSimulators() {
+    try {
+      const response = await fetch('simulators.json');
+      if (!response.ok) throw new Error('Network failure loading simulators.json');
+      simulators = await response.json();
+      DOM.targetBanner.innerText = `Registry Loaded: ${simulators.length} Rigs`;
+    } catch (err) {
+      console.error('Failed to load simulator data:', err);
+      DOM.targetBanner.innerText = 'Failed to load simulator database';
+    }
+  }
 
   function initMap() {
     map = L.map('map-view', {
@@ -490,7 +480,7 @@ html, body {
   }
 
   function updateNearestTarget() {
-    if (!userCoords) return;
+    if (!userCoords || simulators.length === 0) return;
     let closest = null;
     let minRange = Infinity;
 
@@ -550,7 +540,8 @@ html, body {
     }
   }
 
-  function initializeEngine() {
+  async function initializeEngine() {
+    await loadSimulators();
     initMap();
     initSensors();
     fetchTelemetry();
@@ -564,7 +555,6 @@ html, body {
     }, 500);
   }
 
-  // Seamless View Toggle
   DOM.btnToggleView.addEventListener('click', () => {
     if (activeMode === 'MAP') {
       activeMode = 'AR';
