@@ -1,0 +1,92 @@
+[
+  {
+    "id": "sim-2",
+    "name": "Cat 10 Rig",
+    "info": "A380 Aviation Rescue and Fire Fighting simulation rig.",
+    "lat": 51.996011,
+    "lng": -1.683188,
+    "model": "models/rig.glb",
+    "scale": "1 1 1"
+  },
+  {
+    "id": "sim-3",
+    "name": "ARFF Rig C-17",
+    "info": "C17 Aviation Rescue and Fire Fighting simulation rig.",
+    "lat": 51.998301,
+    "lng": -1.678853,
+    "model": "models/arff.glb",
+    "scale": "1 1 1"
+  },
+  {
+    "id": "sim-4",
+    "name": "Merlin Sim",
+    "info": "Rotary-wing aircraft crash and rescue simulator.",
+    "lat": 51.996062,
+    "lng": -1.682645,
+    "model": "models/merlin.glb",
+    "scale": "1 1 1"
+  },
+  {
+    "id": "sim-5",
+    "name": "Industrial A",
+    "info": "Large-scale industrial incident and hazmat scenario trainer.",
+    "lat": 51.99572358454232,
+    "lng": -1.677712924343045,
+    "model": "models/IndA.glb",
+    "scale": "1 1 1"
+  },
+  {
+    "id": "sim-6",
+    "name": "Cessna",
+    "info": "Light aircraft emergency response simulator.",
+    "lat": 52.000157,
+    "lng": -1.678911,
+    "model": "models/cessna.glb",
+    "scale": "1 1 1"
+  },
+  {
+    "id": "sim-7",
+    "name": "Tornado",
+    "info": "2 seat fast Jet.",
+    "lat": 51.998965,
+    "lng": -1.678473,
+    "model": "models/f3.glb",
+    "scale": "1 1 1"
+  },
+  {
+    "id": "sim-8",
+    "name": "Lynx helicopter",
+    "info": "Light battlefield helicopter trainer.",
+    "lat": 52.000487,
+    "lng": -1.677733,
+    "model": "models/lynx.glb",
+    "scale": "1 1 1"
+  },
+  {
+    "id": "sim-9",
+    "name": "Drill tower",
+    "info": "Main Drill tower structure.",
+    "lat": 51.995679,
+    "lng": -1.678509,
+    "model": "models/mdt.glb",
+    "scale": "1 1 1"
+  },
+  {
+    "id": "sim-10",
+    "name": "USAR Building",
+    "info": "Urban Search and Rescue training complex.",
+    "lat": 51.995794,
+    "lng": -1.674954,
+    "model": "models/usar.glb",
+    "scale": "1 1 1"
+  },
+  {
+    "id": "sim-11",
+    "name": "Gym",
+    "info": "Mon-Thu: 06:15-21:00, Fri: 06:15-20:00, Sat-Sun: 08:00-13:00",
+    "lat": 51.99111,
+    "lng": -1.676447,
+    "model": "models/gym.glb",
+    "scale": "1 1 1"
+  }
+]
