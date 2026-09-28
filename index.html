@@ -3,21 +3,28 @@
 <head>
     <title>MIND GARDEN - SPATIAL ASSET REGISTRY</title>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
-    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
     <style>
         :root {
             --mg-bg: #0b1210;
-            --mg-surface: rgba(16, 26, 22, 0.75);
+            --mg-surface: rgba(16, 26, 22, 0.85);
             --mg-emerald: #059669;
             --mg-mint: #34d399;
             --mg-soft-green: #d1fae5;
-            --glass-border: rgba(52, 211, 153, 0.2);
-            --accent-glow: rgba(5, 150, 105, 0.3);
+            --glass-border: rgba(52, 211, 153, 0.25);
+            --accent-glow: rgba(5, 150, 105, 0.35);
             --text-main: #f0fdf4;
             --text-dim: #94a3b8;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            touch-action: pan-x pan-y;
         }
 
         body, html { 
@@ -26,7 +33,9 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
             color: var(--text-main);
             user-select: none;
+            -webkit-user-select: none;
             -webkit-font-smoothing: antialiased;
+            touch-action: none;
         }
 
         /* --- INITIALIZATION INTERFACE --- */
@@ -36,7 +45,7 @@
             z-index: 3000; display: flex; flex-direction: column; 
             justify-content: center; align-items: center; 
             transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.6s;
-            text-align: center; padding: 24px; box-sizing: border-box;
+            text-align: center; padding: 24px;
         }
 
         .radar-container {
@@ -73,19 +82,21 @@
 
         /* --- SENSOR TELEMETRY BAR --- */
         .sensor-bar {
-            position: absolute; top: calc(env(safe-area-inset-top, 10px) + 72px);
+            position: absolute; top: calc(env(safe-area-inset-top, 10px) + 68px);
             left: 50%; transform: translateX(-50%);
             width: 94%; max-width: 520px; z-index: 90;
             display: flex; justify-content: space-between; gap: 8px;
+            pointer-events: none;
         }
 
         .sensor-chip {
             background: var(--mg-surface);
             border: 1px solid var(--glass-border);
             backdrop-filter: blur(16px);
-            border-radius: 8px; padding: 8px 12px;
+            border-radius: 8px; padding: 7px 12px;
             flex: 1; display: flex; align-items: center; justify-content: space-between;
             font-size: 11px; font-variant-numeric: tabular-nums;
+            pointer-events: auto;
         }
 
         .compass-disc {
@@ -109,9 +120,9 @@
             background: var(--mg-surface); 
             backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             border: 1px solid var(--glass-border); 
-            padding: 10px 14px; border-radius: 10px; 
+            padding: 8px 12px; border-radius: 10px; 
             display: flex; justify-content: space-between; align-items: center;
-            gap: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            gap: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
         }
 
         .asset-info { display: flex; flex-direction: column; min-width: 0; flex: 1; }
@@ -135,7 +146,7 @@
         .ui-btn {
             background: rgba(255, 255, 255, 0.04);
             color: var(--text-main); border: 1px solid var(--glass-border);
-            padding: 7px 12px; border-radius: 6px;
+            padding: 7px 10px; border-radius: 6px;
             font-weight: 600; cursor: pointer;
             font-size: 10px; text-transform: uppercase;
             letter-spacing: 0.5px; transition: 0.2s ease;
@@ -145,12 +156,12 @@
 
         /* --- PROXIMITY NOTIFICATION MODAL --- */
         #proximity-alert {
-            position: fixed; top: 130px; left: 50%; transform: translateX(-50%) translateY(-15px);
+            position: fixed; top: 125px; left: 50%; transform: translateX(-50%) translateY(-15px);
             width: 90%; max-width: 480px;
             background: var(--mg-surface);
             backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
             border: 1px solid var(--mg-mint);
-            border-radius: 10px; padding: 14px 16px;
+            border-radius: 10px; padding: 12px 16px;
             box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
             display: flex; align-items: center; justify-content: space-between;
             opacity: 0; pointer-events: none;
@@ -177,20 +188,65 @@
         }
         .ar-btn:active { transform: scale(0.97); }
 
+        /* --- MAP CONTAINER --- */
+        #map-container {
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 50%;
+            background: #091310; border-top: 1px solid var(--glass-border);
+            z-index: 120; transform: translateY(100%);
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            touch-action: pan-x pan-y pinch-zoom;
+        }
+        #map-container.active { transform: translateY(0); }
+
+        #osm-map {
+            width: 100%; height: 100%;
+            touch-action: pan-x pan-y pinch-zoom;
+        }
+
+        .map-header {
+            position: absolute; top: 10px; right: 10px; z-index: 1000;
+            display: flex; gap: 6px;
+        }
+
+        /* Dark mode filter for OSM tiles */
+        .leaflet-tile-pane {
+            filter: invert(100%) hue-rotate(180deg) brightness(85%) contrast(90%) saturate(80%);
+        }
+
+        /* Custom Map Pins */
+        .custom-anchor-icon {
+            background: var(--mg-emerald);
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            width: 14px !important;
+            height: 14px !important;
+            box-shadow: 0 0 10px var(--mg-mint);
+        }
+        .custom-user-icon {
+            background: #38bdf8;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            width: 14px !important;
+            height: 14px !important;
+            box-shadow: 0 0 10px #38bdf8;
+        }
+
         /* --- TECHNICAL SPECIFICATION DRAWER --- */
         .details-panel { 
             position: fixed; top: 0; right: -100%; width: 100%; max-width: 360px; height: 100%; 
             background: #091310; backdrop-filter: blur(30px);
             transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1); 
             z-index: 2000; border-left: 1px solid var(--glass-border);
-            box-sizing: border-box;
         }
         .details-panel.active { right: 0; }
         .spec-content { padding: 48px 24px; }
         .spec-item { margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); padding-bottom: 12px; }
 
         /* --- RENDERER & ANNOTATIONS --- */
-        model-viewer { width: 100vw; height: 100vh; background: var(--mg-bg); }
+        model-viewer { 
+            width: 100vw; height: 100vh; background: var(--mg-bg); 
+            touch-action: pan-y;
+        }
         .Hotspot { 
             background: var(--mg-emerald); border-radius: 50%; width: 12px; height: 12px; 
             border: 2px solid #ffffff; cursor: pointer; transition: 0.2s ease; 
@@ -213,7 +269,7 @@
         <div class="radar-center-node">GEOSPATIAL ANCHOR</div>
     </div>
     <div style="max-width:320px; font-size:12px; color:var(--text-dim); margin-bottom:28px; line-height:1.5;">
-        Mind Garden Spatial Engine. Initializing high-precision WGS84 coordinates and device orientation sensors.
+        Mind Garden Spatial Engine. Initializing high-precision WGS84 coordinates and OpenStreetMap integration.
     </div>
     <button class="commence-btn" onclick="startApp()">Initialize Environment</button>
 </div>
@@ -225,8 +281,9 @@
             <select id="model-select"></select>
         </div>
         <div class="button-group">
+            <button id="toggle-map" class="ui-btn primary">Map</button>
             <button id="toggle-hotspots" class="ui-btn active">Hotspots</button>
-            <button onclick="document.getElementById('details-panel').classList.add('active')" class="ui-btn primary">Telemetry</button>
+            <button onclick="document.getElementById('details-panel').classList.add('active')" class="ui-btn">Telemetry</button>
         </div>
     </div>
 </div>
@@ -254,6 +311,15 @@
     <button id="ar-button" class="ar-btn">Launch Spatial AR</button>
 </div>
 
+<!-- LEAFLET OSM CONTAINER -->
+<div id="map-container">
+    <div class="map-header">
+        <button class="ui-btn primary" onclick="recenterMap()">Recenter</button>
+        <button class="ui-btn" onclick="toggleMap()">Close Map</button>
+    </div>
+    <div id="osm-map"></div>
+</div>
+
 <div id="details-panel" class="details-panel">
     <div class="spec-content">
         <h2 id="asset-title" style="color: var(--mg-mint); font-weight: 400; text-transform: uppercase; margin-bottom:24px; font-size: 1.15rem; letter-spacing:0.5px;">-</h2>
@@ -279,16 +345,24 @@
 </model-viewer>
 
 <script>
+    // Inhibit double-tap zoom on application elements while maintaining Leaflet pinch/scroll zoom
+    document.addEventListener('dblclick', function(e) {
+        if (!e.target.closest('#osm-map')) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+
     const viewer = document.querySelector('#main-viewer');
     const select = document.querySelector('#model-select');
     const hotspotBtn = document.querySelector('#toggle-hotspots');
+    const mapBtn = document.querySelector('#toggle-map');
     const arBtn = document.querySelector('#ar-button');
     const compassEl = document.querySelector('#compass');
     const headingVal = document.querySelector('#heading-val');
     const distanceVal = document.querySelector('#distance-val');
     const alertBox = document.querySelector('#proximity-alert');
+    const mapContainer = document.querySelector('#map-container');
 
-    // Spatial Node Registry - 5 Tudor Road, GL7 1AZ anchored at 51.7118° N, 1.9702° W
     const fleetData = [
         {
             "name": "Neural Monolith - Calibration Node",
@@ -335,6 +409,58 @@
     let selectedIdx = 0;
     const PROXIMITY_THRESHOLD_METERS = 20;
     let notifiedNodes = new Set();
+    let map = null;
+    let mapMarkers = [];
+    let userMarker = null;
+
+    function initMap() {
+        const target = fleetData[selectedIdx];
+        map = L.map('osm-map', {
+            zoomControl: true,
+            attributionControl: false
+        }).setView([target.lat, target.lng], 16);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19
+        }).addTo(map);
+
+        const anchorIcon = L.divIcon({ className: 'custom-anchor-icon', iconSize: [14, 14] });
+
+        fleetData.forEach((item, idx) => {
+            const marker = L.marker([item.lat, item.lng], { icon: anchorIcon }).addTo(map);
+            marker.bindPopup(`<b>${item.name}</b><br>${item.lat.toFixed(4)}, ${item.lng.toFixed(4)}`);
+            marker.on('click', () => {
+                select.value = idx;
+                updateAsset(idx);
+            });
+            mapMarkers.push(marker);
+        });
+    }
+
+    function toggleMap() {
+        const isActive = mapContainer.classList.toggle('active');
+        mapBtn.classList.toggle('active', isActive);
+        if (isActive) {
+            setTimeout(() => {
+                map.invalidateSize();
+                recenterMap();
+            }, 360);
+        }
+    }
+
+    function recenterMap() {
+        if (!map) return;
+        const target = fleetData[selectedIdx];
+        if (userCoords) {
+            const bounds = L.latLngBounds([
+                [userCoords.latitude, userCoords.longitude],
+                [target.lat, target.lng]
+            ]);
+            map.fitBounds(bounds, { padding: [50, 50], maxZoom: 17 });
+        } else {
+            map.setView([target.lat, target.lng], 16);
+        }
+    }
 
     function calculateDistance(lat1, lon1, lat2, lon2) {
         const R = 6371e3;
@@ -353,6 +479,16 @@
         const dist = calculateDistance(userCoords.latitude, userCoords.longitude, currentTarget.lat, currentTarget.lng);
         
         distanceVal.innerText = dist >= 1000 ? `${(dist / 1000).toFixed(2)} km` : `${Math.round(dist)} m`;
+
+        if (map) {
+            const userIcon = L.divIcon({ className: 'custom-user-icon', iconSize: [14, 14] });
+            if (!userMarker) {
+                userMarker = L.marker([userCoords.latitude, userCoords.longitude], { icon: userIcon }).addTo(map);
+                userMarker.bindPopup('Current Telemetry Origin');
+            } else {
+                userMarker.setLatLng([userCoords.latitude, userCoords.longitude]);
+            }
+        }
 
         fleetData.forEach((item, idx) => {
             const d = calculateDistance(userCoords.latitude, userCoords.longitude, item.lat, item.lng);
@@ -432,6 +568,7 @@
 
     function startApp() {
         initSensors();
+        initMap();
         const screen = document.getElementById('start-screen');
         screen.style.opacity = '0';
         screen.style.pointerEvents = 'none';
@@ -474,6 +611,10 @@
             }
         }, { once: true });
 
+        if (map && mapContainer.classList.contains('active')) {
+            map.panTo([asset.lat, asset.lng]);
+        }
+
         checkProximities();
     }
 
@@ -484,6 +625,7 @@
         });
     };
 
+    mapBtn.onclick = toggleMap;
     arBtn.onclick = () => viewer.activateAR();
     select.onchange = (e) => updateAsset(parseInt(e.target.value, 10));
     window.addEventListener('load', init);
