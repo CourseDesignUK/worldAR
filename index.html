@@ -3,20 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Fire Service College - Spatial Asset Map</title>
+<title>Fire Service College - Geospatial AR Map</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- A-Frame & AR.js Location-Based System -->
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
+
 <style>
 :root {
   --bg-base: #0b1210;
-  --panel-bg: rgba(16, 26, 22, 0.88);
+  --panel-bg: rgba(16, 26, 22, 0.92);
   --text-primary: #f0fdf4;
   --text-secondary: #94a3b8;
   --accent-primary: #059669;
   --accent-secondary: #34d399;
   --border: rgba(52, 211, 153, 0.25);
   --accent-glow: rgba(5, 150, 105, 0.35);
-  --danger-red: #ef4444;
   --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
@@ -110,7 +114,7 @@ body {
 .commence-btn:hover { background: #047857; }
 .commence-btn:active { transform: scale(0.98); }
 
-/* --- CORE APP INTERFACE --- */
+/* --- HUD TOP BAR --- */
 .status-bar { 
   background: var(--panel-bg); 
   padding: 10px 14px; 
@@ -160,7 +164,6 @@ body {
 .leaflet-container { font-family: var(--font-stack); }
 .leaflet-control-attribution { display: none; }
 
-/* Dark mode raster map inversion */
 .leaflet-tile-pane {
   filter: invert(100%) hue-rotate(180deg) brightness(85%) contrast(90%) saturate(80%);
 }
@@ -197,26 +200,27 @@ body {
   backdrop-filter: blur(12px);
   transition: background 0.2s, border-color 0.2s; 
 }
-.control-btn:active { background: var(--accent-primary); border-color: var(--accent-secondary); }
+.control-btn.ar-highlight {
+  background: rgba(5, 150, 105, 0.25);
+  border-color: var(--accent-secondary);
+  color: var(--accent-secondary);
+}
+.control-btn:active { background: var(--accent-primary); border-color: var(--accent-secondary); color: #ffffff; }
 
-/* --- MAP PINS --- */
+/* Map Pins */
 .leaflet-custom-hotspot {
   background-color: var(--accent-primary);
   border: 2px solid #ffffff;
   border-radius: 50%;
   cursor: pointer;
   box-shadow: 0 0 10px var(--accent-secondary);
-  transition: transform 0.2s ease;
 }
-.leaflet-custom-hotspot:active { transform: scale(1.2); }
-
 .custom-user-icon {
   background-color: #38bdf8;
   border: 2px solid #ffffff;
   border-radius: 50%;
   box-shadow: 0 0 10px #38bdf8;
 }
-
 .hotspot-label {
   background-color: var(--panel-bg);
   border: 1px solid var(--border);
@@ -231,80 +235,66 @@ body {
 }
 .leaflet-tooltip-bottom.hotspot-label::before { border-bottom-color: var(--panel-bg); }
 
-/* --- MODAL & AR ENGINE --- */
-.modal {
+/* --- FULL-SCREEN GEOLOCATED AR OVERLAY --- */
+#ar-scene-container {
+  display: none;
   position: fixed;
-  top: 0; left: 0; width: 100vw; height: 100vh;
-  background: rgba(11, 18, 16, 0.85);
-  backdrop-filter: blur(12px);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 2000;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 5000;
+  background: #000000;
 }
-.modal.hidden { display: none; }
-.modal-content {
+#ar-scene-container.active {
+  display: block;
+}
+.ar-hud-overlay {
+  position: absolute;
+  top: env(safe-area-inset-top, 16px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 480px;
   background: var(--panel-bg);
-  width: 95%; max-width: 600px;
-  border-radius: 12px;
-  padding: 2.2rem 1.2rem 1.2rem;
-  position: relative;
   border: 1px solid var(--border);
-  box-shadow: 0 24px 48px rgba(0,0,0,0.6);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-.close-btn {
-  position: absolute; top: 6px; right: 14px;
-  background: none; border: none; font-size: 1.8rem;
-  color: var(--text-secondary); cursor: pointer; padding: 4px;
-}
-#simulator-title {
-  margin: 0 0 0.3rem 0;
-  font-weight: 700; font-size: 1.15rem;
-  color: var(--accent-secondary); text-align: center;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-#simulator-info {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  text-align: center;
-  margin: 0 0 1rem 0;
-  line-height: 1.45;
-  width: 100%;
-}
-model-viewer {
-  width: 100%; height: 46vh; min-height: 260px;
-  background-color: rgba(0, 0, 0, 0.35); outline: none; position: relative;
   border-radius: 8px;
-  border: 1px solid var(--border);
+  padding: 8px 14px;
+  z-index: 5001;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  backdrop-filter: blur(12px);
+  font-size: 0.8rem;
+  font-weight: 600;
 }
-#fallback-image {
-  width: 100%; max-height: 46vh; min-height: 260px;
-  object-fit: cover; border-radius: 8px; display: none;
-  border: 1px solid var(--border);
-}
-.ar-trigger-btn {
-  background-color: var(--accent-primary);
-  color: #ffffff; border: 1px solid var(--accent-secondary);
-  padding: 11px 22px; border-radius: 6px;
-  font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
-  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
-  cursor: pointer; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.4);
+.exit-ar-btn {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border: 1px solid #ef4444;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
   font-size: 0.75rem;
-  white-space: nowrap;
+  text-transform: uppercase;
 }
-.ar-trigger-btn:active { background: #047857; }
-.progress-bar {
-  display: block; width: 50%; height: 6px; border-radius: 3px;
-  position: absolute; left: 25%; top: 50%; transform: translateY(-50%);
-  background-color: var(--panel-bg); border: 1px solid var(--border);
-  overflow: hidden; pointer-events: none;
+.ar-target-hud {
+  position: absolute;
+  bottom: env(safe-area-inset-bottom, 20px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 16px;
+  z-index: 5001;
+  font-size: 0.8rem;
+  text-align: center;
+  width: 90%;
+  max-width: 420px;
+  backdrop-filter: blur(12px);
 }
-.progress-bar.hide { visibility: hidden; transition: visibility 0.3s; }
-.update-bar { background-color: var(--accent-secondary); width: 0%; height: 100%; transition: width 0.3s; }
 </style>
 </head>
 <body>
@@ -313,16 +303,16 @@ model-viewer {
 <div id="start-screen">
   <div class="radar-container">
     <div class="radar-sweep"></div>
-    <div class="radar-center-node">FSC Spatial Engine</div>
+    <div class="radar-center-node">FSC GeoAR Spatial Engine</div>
   </div>
   <div style="max-width:320px; font-size:12px; color:var(--text-secondary); margin-bottom:28px; line-height:1.5;">
-    Fire Service College Geospatial Rig Registry. Initializing real-time coordinate matrix, sensor telemetry, and AR inspection pipelines.
+    Spawning models at their true WGS84 geographic anchors. Initializing real-time GPS matrix, camera tracking, and sensor telemetry.
   </div>
   <button class="commence-btn" onclick="startApp()">Initialize Operational Map</button>
 </div>
 
 <div class="status-bar">
-  <div>FSC Rig Registry</div>
+  <div>FSC Spatial Anchors</div>
   <div class="status-indicator">
     <div class="live-dot"></div>
     <span id="gpsStatus">STANDBY</span>
@@ -337,81 +327,73 @@ model-viewer {
   <div class="weather-item"><span class="weather-label">WIND</span><span id="wSpdDisplay" class="weather-val">--</span></div>
   <div class="weather-item"><span class="weather-label">DIR</span><span id="wDirDisplay" class="weather-val">--</span></div>
   <div class="weather-item"><span class="weather-label">TEMP</span><span id="tempDisplay" class="weather-val">--</span></div>
-  <div class="weather-item"><span class="weather-label">HUMID</span><span id="rhDisplay" class="weather-val">--</span></div>
+  <div class="weather-item"><span class="weather-label">NEAREST</span><span id="nearestDisplay" class="weather-val">--</span></div>
 </div>
 
 <div class="control-buttons">
   <button id="btnLocation" class="control-btn">Locate</button>
+  <button id="btnAR" class="control-btn ar-highlight">Launch World AR</button>
   <button id="btnReset" class="control-btn">Reset Target</button>
 </div>
 
-<!-- SIMULATOR AR MODAL -->
-<div id="ar-modal" class="modal hidden">
-  <div class="modal-content">
-    <button class="close-btn" id="close-modal">&times;</button>
-    <h2 id="simulator-title">Simulator Name</h2>
-    <p id="simulator-info">Simulator detailed information.</p>
-    
-    <img id="fallback-image" src="" alt="Simulator Image Fallback" />
-    
-    <model-viewer 
-      id="active-model" 
-      src="" 
-      ios-src="" 
-      ar 
-      ar-modes="webxr scene-viewer quick-look" 
-      ar-scale="auto"
-      ar-placement="floor"
-      camera-controls 
-      touch-action="pan-y"
-      auto-rotate 
-      shadow-intensity="1.2"
-      shadow-softness="0.8">
-      <div class="progress-bar hide" slot="progress-bar">
-        <div class="update-bar"></div>
-      </div>
-      <button slot="ar-button" class="ar-trigger-btn">Deploy Spatial AR</button>
-    </model-viewer>
-    
-    <audio id="model-audio" style="display:none;"></audio>
+<!-- FULL SCREEN GEOLOCATED WORLD AR SCENE -->
+<div id="ar-scene-container">
+  <div class="ar-hud-overlay">
+    <div><span>GEO ANCHOR MODE: </span><span id="ar-gps-readout" style="color:var(--accent-secondary);">SEARCHING</span></div>
+    <button class="exit-ar-btn" id="btnExitAR">Exit AR</button>
   </div>
+
+  <div class="ar-target-hud" id="arTargetHud">
+    <span style="color:var(--text-secondary);">AIM CAMERA AT PHYSICAL SIMULATOR LOCATION</span>
+  </div>
+
+  <a-scene
+    id="arScene"
+    embedded
+    loading-screen="enabled: false;"
+    arjs="sourceType: webcam; debugUIEnabled: false; videoTexture: true;"
+    vr-mode-ui="enabled: false">
+    
+    <a-camera gps-new-camera="gpsMinDistance: 5; maxDistance: 1200;" rotation-reader></a-camera>
+    
+    <!-- Geolocation Anchors dynamically injected via JavaScript -->
+    <a-entity id="geoModelsContainer"></a-entity>
+  </a-scene>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
   const DOM = {
     startScreen: document.getElementById('start-screen'),
     gpsStatus: document.getElementById('gpsStatus'), 
-    modal: document.getElementById('ar-modal'), 
-    closeModalBtn: document.getElementById('close-modal'),
-    modelViewer: document.getElementById('active-model'), 
-    fallbackImage: document.getElementById('fallback-image'),
-    simulatorTitle: document.getElementById('simulator-title'),
-    simulatorInfo: document.getElementById('simulator-info'),
     wSpdDisplay: document.getElementById('wSpdDisplay'),
     wDirDisplay: document.getElementById('wDirDisplay'),
     tempDisplay: document.getElementById('tempDisplay'),
-    rhDisplay: document.getElementById('rhDisplay'),
+    nearestDisplay: document.getElementById('nearestDisplay'),
     btnLocation: document.getElementById('btnLocation'),
     btnReset: document.getElementById('btnReset'),
-    updateBar: document.querySelector('.update-bar'),
-    audio: document.getElementById('model-audio')
+    btnAR: document.getElementById('btnAR'),
+    btnExitAR: document.getElementById('btnExitAR'),
+    arContainer: document.getElementById('ar-scene-container'),
+    arGpsReadout: document.getElementById('ar-gps-readout'),
+    arTargetHud: document.getElementById('arTargetHud'),
+    geoModelsContainer: document.getElementById('geoModelsContainer')
   };
 
-  let map, userMarker = null;
+  let map, userMarker = null, userPos = null;
   const originLat = 51.9943, originLon = -1.6823;
   
+  // Real world coordinates for all 10 simulators
   const simulators = [
-    { id: "sim-2", name: "Cat 10 Rig", info: "A380 Aviation Rescue and Fire Fighting simulation rig.", lat: 51.996011, lng: -1.683188, model_src: "models/rig.glb", ios_src: "models/rig.usdz", img_fallback: "images/rig.jpg", audio_src: "audio/rig.mp3" },
-    { id: "sim-3", name: "ARFF Rig C-17", info: "C17 Aviation Rescue and Fire Fighting simulation rig.", lat: 51.998301, lng: -1.678853, model_src: "models/arff.glb", ios_src: "models/arff.usdz", img_fallback: "images/arff.jpg", audio_src: "audio/arff.mp3" },
-    { id: "sim-4", name: "Merlin Sim", info: "Rotary-wing aircraft crash and rescue simulator.", lat: 51.996062, lng: -1.682645, model_src: "models/merlin.glb", ios_src: "models/merlin.usdz", img_fallback: "images/merlin.jpg", audio_src: "audio/merlin.mp3" },
-    { id: "sim-5", name: "Industrial A", info: "Large-scale industrial incident and hazmat scenario trainer.", lat: 51.99572358454232, lng: -1.677712924343045, model_src: "models/IndA.glb", ios_src: "models/IndA.usdz", img_fallback: "images/inda.jpg", audio_src: "audio/inda.mp3" },
-    { id: "sim-6", name: "Cessna", info: "Light aircraft emergency response simulator.", lat: 52.000157, lng: -1.678911, model_src: "models/cessna.glb", ios_src: "models/cessna.usdz", img_fallback: "images/cessna.jpg", audio_src: "audio/cessna.mp3" },
-    { id: "sim-7", name: "Tornado", info: "2 seat fast Jet.", lat: 51.998965, lng: -1.678473, model_src: "models/f3.glb", ios_src: "models/f3.usdz", img_fallback: "images/f3.jpg", audio_src: "audio/f3.mp3" },
-    { id: "sim-8", name: "Lynx helicopter", info: "Light battlefield helicopter trainer.", lat: 52.000487, lng: -1.677733, model_src: "models/lynx.glb", ios_src: "models/lynx.usdz", img_fallback: "images/lynx.jpg", audio_src: "audio/lynx.mp3" },
-    { id: "sim-9", name: "Drill tower", info: "Main Drill tower structure.", lat: 51.995679, lng: -1.678509, model_src: "models/mdt.glb", ios_src: "models/mdt.usdz", img_fallback: "images/mdt.jpg", audio_src: "audio/mdt.mp3" },
-    { id: "sim-10", name: "USAR Building", info: "Urban Search and Rescue training complex.", lat: 51.995794, lng: -1.674954, model_src: "models/usar.glb", ios_src: "models/usar.usdz", img_fallback: "images/usar.jpg", audio_src: "audio/usar.mp3" },
-    { id: "sim-11", name: "Gym", info: "Mon-Thu: 06:15-21:00, Fri: 06:15-20:00, Sat-Sun: 08:00-13:00", lat: 51.991110, lng: -1.676447, model_src: "models/gym.glb", ios_src: "models/gym.usdz", img_fallback: "images/gym.jpg", audio_src: "audio/gym.mp3" }
+    { id: "sim-2", name: "Cat 10 Rig", lat: 51.996011, lng: -1.683188, model_src: "models/rig.glb", scale: "1 1 1" },
+    { id: "sim-3", name: "ARFF Rig C-17", lat: 51.998301, lng: -1.678853, model_src: "models/arff.glb", scale: "1 1 1" },
+    { id: "sim-4", name: "Merlin Sim", lat: 51.996062, lng: -1.682645, model_src: "models/merlin.glb", scale: "1 1 1" },
+    { id: "sim-5", name: "Industrial A", lat: 51.99572358454232, lng: -1.677712924343045, model_src: "models/IndA.glb", scale: "1 1 1" },
+    { id: "sim-6", name: "Cessna", lat: 52.000157, lng: -1.678911, model_src: "models/cessna.glb", scale: "1 1 1" },
+    { id: "sim-7", name: "Tornado", lat: 51.998965, lng: -1.678473, model_src: "models/f3.glb", scale: "1 1 1" },
+    { id: "sim-8", name: "Lynx helicopter", lat: 52.000487, lng: -1.677733, model_src: "models/lynx.glb", scale: "1 1 1" },
+    { id: "sim-9", name: "Drill tower", lat: 51.995679, lng: -1.678509, model_src: "models/mdt.glb", scale: "1 1 1" },
+    { id: "sim-10", name: "USAR Building", lat: 51.995794, lng: -1.674954, model_src: "models/usar.glb", scale: "1 1 1" },
+    { id: "sim-11", name: "Gym", lat: 51.991110, lng: -1.676447, model_src: "models/gym.glb", scale: "1 1 1" }
   ];
 
   function initMap() {
@@ -423,15 +405,9 @@ model-viewer {
       touchZoom: true 
     }).setView([originLat, originLon], 15);
     
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
-      maxZoom: 19 
-    }).addTo(map);
-    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
     renderHotspots();
-    
-    map.whenReady(() => {
-      setTimeout(() => map.invalidateSize(), 150);
-    });
+    map.whenReady(() => setTimeout(() => map.invalidateSize(), 150));
   }
 
   function renderHotspots() {
@@ -439,83 +415,62 @@ model-viewer {
     simulators.forEach(sim => {
       const marker = L.marker([sim.lat, sim.lng], { icon: customIcon }).addTo(map);
       marker.bindTooltip(sim.name, { permanent: true, direction: 'bottom', className: 'hotspot-label', offset: [0, 8] });
-      marker.on('click', (e) => {
-        L.DomEvent.stopPropagation(e);
-        openSimulator(sim);
-      });
     });
   }
 
-  function openSimulator(sim) {
-    DOM.simulatorTitle.textContent = sim.name;
-    DOM.simulatorInfo.textContent = sim.info || "Technical profile pending.";
-
-    DOM.modelViewer.src = "";
-    DOM.modelViewer.iosSrc = "";
-    if (DOM.updateBar) DOM.updateBar.style.width = '0%';
-
-    if (sim.model_src && sim.model_src.trim() !== "") {
-      DOM.fallbackImage.style.display = "none";
-      DOM.modelViewer.style.display = "block";
-      
-      setTimeout(() => {
-        DOM.modelViewer.src = sim.model_src;
-        DOM.modelViewer.iosSrc = sim.ios_src || "";
-      }, 50);
-    } else {
-      DOM.modelViewer.style.display = "none";
-      DOM.fallbackImage.src = sim.img_fallback || "images/placeholder.jpg";
-      DOM.fallbackImage.style.display = "block";
-    }
-
-    if (sim.audio_src && sim.audio_src.trim() !== "") {
-      DOM.audio.src = sim.audio_src;
-      DOM.audio.play().catch(() => {});
-    } else {
-      DOM.audio.pause();
-      DOM.audio.src = "";
-    }
-
-    DOM.modal.classList.remove('hidden');
-  }
-
-  function closeModal() {
-    DOM.modal.classList.add('hidden');
-    DOM.modelViewer.src = "";
-    DOM.modelViewer.iosSrc = "";
-    DOM.fallbackImage.src = "";
-    DOM.audio.pause();
-    DOM.audio.currentTime = 0;
-    DOM.audio.src = "";
-  }
-
-  DOM.modelViewer.addEventListener('progress', (event) => {
-    const progressBar = DOM.modelViewer.querySelector('.progress-bar');
-    const updateBar = DOM.modelViewer.querySelector('.update-bar');
-    const progress = event.detail.totalProgress;
+  // Inject models with real-world GPS coordinates into the WebXR / A-Frame engine
+  function injectGeoAnchors() {
+    DOM.geoModelsContainer.innerHTML = '';
     
-    if (progress === 1) {
-      progressBar.classList.add('hide');
-    } else {
-      progressBar.classList.remove('hide');
-      if (updateBar) updateBar.style.width = `${progress * 100}%`;
-    }
-  });
+    simulators.forEach((sim) => {
+      const entity = document.createElement('a-entity');
+      
+      // Real-world geographical location attachment
+      entity.setAttribute('gps-new-entity-place', {
+        latitude: sim.lat,
+        longitude: sim.lng
+      });
+      
+      entity.setAttribute('gltf-model', sim.model_src);
+      entity.setAttribute('scale', sim.scale);
+      entity.setAttribute('id', `geo-anchor-${sim.id}`);
 
-  async function fetchWeather() {
-    try {
-      const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${originLat}&longitude=${originLon}&current=temperature_2m,wind_speed_10m,wind_direction_10m,relative_humidity_2m&wind_speed_unit=mph`);
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      DOM.tempDisplay.innerText = Math.round(data.current.temperature_2m) + '°C';
-      DOM.wSpdDisplay.innerText = Math.round(data.current.wind_speed_10m) + ' mph';
-      DOM.wDirDisplay.innerText = Math.round(data.current.wind_direction_10m) + '°';
-      DOM.rhDisplay.innerText = Math.round(data.current.relative_humidity_2m) + '%';
-    } catch {
-      DOM.tempDisplay.innerText = 'ERR';
-      DOM.wSpdDisplay.innerText = 'ERR';
-      DOM.wDirDisplay.innerText = 'ERR';
-      DOM.rhDisplay.innerText = 'ERR';
+      // Distance and visibility range handler
+      entity.addEventListener('gps-entity-place-loaded', () => {
+        console.log(`[GEO-AR] Spawned ${sim.name} at: ${sim.lat}, ${sim.lng}`);
+      });
+
+      DOM.geoModelsContainer.appendChild(entity);
+    });
+  }
+
+  function calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371e3;
+    const rad = Math.PI / 180;
+    const dLat = (lat2 - lat1) * rad;
+    const dLon = (lon2 - lon1) * rad;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(lat1 * rad) * Math.cos(lat2 * rad) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+  }
+
+  function updateNearestRig() {
+    if (!userPos) return;
+    let closest = null;
+    let minDist = Infinity;
+
+    simulators.forEach(sim => {
+      const d = calculateDistance(userPos.latitude, userPos.longitude, sim.lat, sim.lng);
+      if (d < minDist) {
+        minDist = d;
+        closest = sim;
+      }
+    });
+
+    if (closest) {
+      DOM.nearestDisplay.innerText = `${Math.round(minDist)}m`;
+      DOM.arTargetHud.innerHTML = `TARGET ANCHOR: <strong style="color:var(--accent-secondary);">${closest.name}</strong> (${Math.round(minDist)}m)`;
     }
   }
 
@@ -525,6 +480,9 @@ model-viewer {
       navigator.geolocation.watchPosition(
         (pos) => {
           DOM.gpsStatus.innerText = "GPS ACTIVE";
+          DOM.arGpsReadout.innerText = `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
+          userPos = pos.coords;
+          
           const coords = [pos.coords.latitude, pos.coords.longitude];
           const userIcon = L.divIcon({ className: 'custom-user-icon', iconSize: [14, 14] });
           
@@ -533,8 +491,13 @@ model-viewer {
           } else {
             userMarker.setLatLng(coords);
           }
+
+          updateNearestRig();
         },
-        () => { DOM.gpsStatus.innerText = "NO FIX"; },
+        () => { 
+          DOM.gpsStatus.innerText = "NO FIX"; 
+          DOM.arGpsReadout.innerText = "SIGNAL UNAVAILABLE";
+        },
         { enableHighAccuracy: true, maximumAge: 0, timeout: 8000 }
       );
     } else {
@@ -546,10 +509,26 @@ model-viewer {
     }
   }
 
+  async function fetchWeather() {
+    try {
+      const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${originLat}&longitude=${originLon}&current=temperature_2m,wind_speed_10m,wind_direction_10m&wind_speed_unit=mph`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      DOM.tempDisplay.innerText = Math.round(data.current.temperature_2m) + '°C';
+      DOM.wSpdDisplay.innerText = Math.round(data.current.wind_speed_10m) + ' mph';
+      DOM.wDirDisplay.innerText = Math.round(data.current.wind_direction_10m) + '°';
+    } catch {
+      DOM.tempDisplay.innerText = 'ERR';
+      DOM.wSpdDisplay.innerText = 'ERR';
+      DOM.wDirDisplay.innerText = 'ERR';
+    }
+  }
+
   function startApp() {
     initMap();
     initSensors();
     fetchWeather();
+    injectGeoAnchors();
     
     DOM.startScreen.style.opacity = '0';
     DOM.startScreen.style.pointerEvents = 'none';
@@ -559,21 +538,21 @@ model-viewer {
     }, 600);
   }
 
-  function detectLocation() {
+  // Switch to Fullscreen Spatial Camera View
+  DOM.btnAR.addEventListener('click', () => {
+    DOM.arContainer.classList.add('active');
+  });
+
+  DOM.btnExitAR.addEventListener('click', () => {
+    DOM.arContainer.classList.remove('active');
+  });
+
+  DOM.btnLocation.addEventListener('click', () => {
     if (userMarker) {
       map.setView(userMarker.getLatLng(), 16);
-    } else if (navigator.geolocation) {
-      DOM.gpsStatus.innerText = "SEEKING...";
-      navigator.geolocation.getCurrentPosition(pos => {
-        DOM.gpsStatus.innerText = "GPS ACTIVE";
-        map.setView([pos.coords.latitude, pos.coords.longitude], 16);
-      }, () => { DOM.gpsStatus.innerText = "NO FIX"; });
     }
-  }
+  });
 
-  DOM.closeModalBtn.addEventListener('click', closeModal);
-  DOM.modal.addEventListener('click', e => { if (e.target === DOM.modal) closeModal(); });
-  DOM.btnLocation.addEventListener('click', detectLocation);
   DOM.btnReset.addEventListener('click', () => map.setView([originLat, originLon], 15));
 </script>
 </body>
