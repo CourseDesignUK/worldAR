@@ -1,635 +1,396 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>MIND GARDEN - SPATIAL ASSET REGISTRY</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>FSC Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+<style>
+:root {
+  --bg-base: #ffffff;
+  --panel-bg: #f8f9fa;
+  --text-primary: #ff0000;
+  --text-secondary: #000000;
+  --accent-primary: #cc0000;
+  --accent-secondary: #333333;
+  --border: #dddddd;
+  --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+body { 
+  font-family: var(--font-stack); 
+  background: var(--bg-base); 
+  color: var(--text-primary); 
+  margin: 0; 
+  padding: 10px; 
+  box-sizing: border-box; 
+  display: flex; 
+  flex-direction: column; 
+  height: 100vh; 
+  gap: 8px; 
+  overflow: hidden; 
+}
+.status-bar { background: var(--panel-bg); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); display: flex; justify-content: center; align-items: center; font-size: 1rem; font-weight: bold; flex-shrink: 0; color: var(--text-primary); text-align: center; }
+.map-wrapper { background: var(--panel-bg); border-radius: 8px; position: relative; overflow: hidden; flex-grow: 1; min-height: 0; border: 1px solid var(--border); }
+#map { 
+  width: 100%; 
+  height: 100%; 
+  background: #e5e3df; 
+}
+.leaflet-container { font-family: var(--font-stack); }
+.leaflet-control-attribution { display: none; }
+.loading-curtain { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-base); z-index: 9999; display: flex; justify-content: center; align-items: center; color: var(--text-primary); font-weight: bold; text-transform: uppercase; }
 
-    <style>
-        :root {
-            --mg-bg: #0b1210;
-            --mg-surface: rgba(16, 26, 22, 0.85);
-            --mg-emerald: #059669;
-            --mg-mint: #34d399;
-            --mg-soft-green: #d1fae5;
-            --glass-border: rgba(52, 211, 153, 0.25);
-            --accent-glow: rgba(5, 150, 105, 0.35);
-            --text-main: #f0fdf4;
-            --text-dim: #94a3b8;
-        }
+.weather-data { display: flex; justify-content: space-between; background: var(--panel-bg); padding: 12px; border-radius: 8px; font-size: 0.85rem; border: 1px solid var(--border); margin-top: 4px; flex-shrink: 0; }
+.weather-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.weather-label { color: var(--text-secondary); font-size: 0.65rem; font-weight: 600; letter-spacing: 0.05em; }
+.weather-val { color: var(--text-primary); font-family: monospace; font-size: 1rem; font-weight: 700; }
 
-        *, *::before, *::after {
-            box-sizing: border-box;
-            touch-action: pan-x pan-y;
-        }
+.control-buttons { display: flex; gap: 8px; flex-shrink: 0; padding-bottom: env(safe-area-inset-bottom, 0px); }
+.control-btn { flex: 1; background: var(--panel-bg); color: var(--text-primary); border: 1px solid var(--border); padding: 12px; border-radius: 8px; font-family: var(--font-stack); font-weight: 600; font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: background-color 0.2s; }
+.control-btn:active { background: var(--accent-secondary); color: var(--bg-base); }
 
-        body, html { 
-            margin: 0; padding: 0; width: 100%; height: 100%; 
-            overflow: hidden; background-color: var(--mg-bg); 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-            color: var(--text-main);
-            user-select: none;
-            -webkit-user-select: none;
-            -webkit-font-smoothing: antialiased;
-            touch-action: none;
-        }
-
-        /* --- INITIALIZATION INTERFACE --- */
-        #start-screen { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: radial-gradient(circle at center, #11221b 0%, var(--mg-bg) 100%); 
-            z-index: 3000; display: flex; flex-direction: column; 
-            justify-content: center; align-items: center; 
-            transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.6s;
-            text-align: center; padding: 24px;
-        }
-
-        .radar-container {
-            position: relative; width: 200px; height: 200px;
-            display: flex; justify-content: center; align-items: center;
-            margin-bottom: 28px;
-        }
-
-        .radar-sweep { 
-            position: absolute; width: 100%; height: 100%; border-radius: 50%;
-            background: conic-gradient(from -90deg at 50% 50%, transparent 270deg, var(--accent-glow) 360deg); 
-            animation: sweep 3.5s linear infinite; 
-            border: 1px solid var(--glass-border);
-        }
-        @keyframes sweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
-        .radar-center-node {
-            z-index: 3002; background: rgba(5, 150, 105, 0.15); 
-            color: var(--mg-mint); padding: 10px 18px; font-weight: 600; 
-            letter-spacing: 1.5px; border-radius: 6px; font-size: 11px;
-            border: 1px solid var(--mg-emerald);
-            backdrop-filter: blur(8px);
-        }
-
-        .commence-btn { 
-            background: var(--mg-emerald); 
-            color: #ffffff; border: 1px solid var(--mg-mint); 
-            padding: 12px 28px; border-radius: 6px; cursor: pointer; 
-            font-weight: 600; letter-spacing: 1px; text-transform: uppercase;
-            font-size: 11px; z-index: 3001; transition: 0.2s ease;
-        }
-        .commence-btn:hover { background: #047857; }
-        .commence-btn:active { transform: scale(0.98); }
-
-        /* --- SENSOR TELEMETRY BAR --- */
-        .sensor-bar {
-            position: absolute; top: calc(env(safe-area-inset-top, 10px) + 68px);
-            left: 50%; transform: translateX(-50%);
-            width: 94%; max-width: 520px; z-index: 90;
-            display: flex; justify-content: space-between; gap: 8px;
-            pointer-events: none;
-        }
-
-        .sensor-chip {
-            background: var(--mg-surface);
-            border: 1px solid var(--glass-border);
-            backdrop-filter: blur(16px);
-            border-radius: 8px; padding: 7px 12px;
-            flex: 1; display: flex; align-items: center; justify-content: space-between;
-            font-size: 11px; font-variant-numeric: tabular-nums;
-            pointer-events: auto;
-        }
-
-        .compass-disc {
-            width: 12px; height: 12px; border-radius: 50%;
-            border: 1px solid var(--mg-mint); display: inline-block;
-            position: relative; transition: transform 0.1s linear;
-        }
-        .compass-disc::after {
-            content: ''; position: absolute; top: 1px; left: 5px;
-            width: 2px; height: 4px; background: var(--mg-mint);
-        }
-
-        /* --- NAVIGATION CONTROLS --- */
-        .app-overlay { 
-            position: absolute; top: env(safe-area-inset-top, 15px); 
-            left: 50%; transform: translateX(-50%); 
-            width: 94%; max-width: 520px; z-index: 100; 
-        }
-
-        .control-panel { 
-            background: var(--mg-surface); 
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border); 
-            padding: 8px 12px; border-radius: 10px; 
-            display: flex; justify-content: space-between; align-items: center;
-            gap: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-        }
-
-        .asset-info { display: flex; flex-direction: column; min-width: 0; flex: 1; }
-
-        .panel-label { 
-            font-size: 9px; color: var(--mg-mint); 
-            text-transform: uppercase; font-weight: 700; 
-            letter-spacing: 0.8px; margin-bottom: 2px; 
-        }
-
-        select { 
-            background: transparent; color: var(--text-main); border: none; 
-            font-weight: 600; font-size: 12px; outline: none; 
-            cursor: pointer; width: 100%;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
-        select option { background-color: #0f1c16; color: var(--text-main); }
-        
-        .button-group { display: flex; gap: 6px; flex-shrink: 0; }
-
-        .ui-btn {
-            background: rgba(255, 255, 255, 0.04);
-            color: var(--text-main); border: 1px solid var(--glass-border);
-            padding: 7px 10px; border-radius: 6px;
-            font-weight: 600; cursor: pointer;
-            font-size: 10px; text-transform: uppercase;
-            letter-spacing: 0.5px; transition: 0.2s ease;
-        }
-        .ui-btn.active { background: var(--mg-emerald); border-color: var(--mg-mint); color: #ffffff; }
-        .ui-btn.primary { background: rgba(5, 150, 105, 0.2); border-color: var(--mg-emerald); color: var(--mg-mint); }
-
-        /* --- PROXIMITY NOTIFICATION MODAL --- */
-        #proximity-alert {
-            position: fixed; top: 125px; left: 50%; transform: translateX(-50%) translateY(-15px);
-            width: 90%; max-width: 480px;
-            background: var(--mg-surface);
-            backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-            border: 1px solid var(--mg-mint);
-            border-radius: 10px; padding: 12px 16px;
-            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
-            display: flex; align-items: center; justify-content: space-between;
-            opacity: 0; pointer-events: none;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            z-index: 2500;
-        }
-        #proximity-alert.active { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }
-
-        /* --- AUGMENTED REALITY INITIALIZER --- */
-        .ar-container {
-            position: absolute; bottom: env(safe-area-inset-bottom, 25px);
-            left: 50%; transform: translateX(-50%); z-index: 150;
-        }
-
-        .ar-btn {
-            background: var(--mg-surface);
-            backdrop-filter: blur(12px);
-            border: 1px solid var(--mg-mint);
-            color: var(--mg-mint); padding: 11px 24px;
-            border-radius: 8px; font-size: 11px;
-            text-transform: uppercase; font-weight: 700;
-            letter-spacing: 1px; cursor: pointer;
-            transition: 0.2s ease;
-        }
-        .ar-btn:active { transform: scale(0.97); }
-
-        /* --- MAP CONTAINER --- */
-        #map-container {
-            position: fixed; bottom: 0; left: 0; width: 100%; height: 50%;
-            background: #091310; border-top: 1px solid var(--glass-border);
-            z-index: 120; transform: translateY(100%);
-            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-            touch-action: pan-x pan-y pinch-zoom;
-        }
-        #map-container.active { transform: translateY(0); }
-
-        #osm-map {
-            width: 100%; height: 100%;
-            touch-action: pan-x pan-y pinch-zoom;
-        }
-
-        .map-header {
-            position: absolute; top: 10px; right: 10px; z-index: 1000;
-            display: flex; gap: 6px;
-        }
-
-        /* Dark mode filter for OSM tiles */
-        .leaflet-tile-pane {
-            filter: invert(100%) hue-rotate(180deg) brightness(85%) contrast(90%) saturate(80%);
-        }
-
-        /* Custom Map Pins */
-        .custom-anchor-icon {
-            background: var(--mg-emerald);
-            border: 2px solid #ffffff;
-            border-radius: 50%;
-            width: 14px !important;
-            height: 14px !important;
-            box-shadow: 0 0 10px var(--mg-mint);
-        }
-        .custom-user-icon {
-            background: #38bdf8;
-            border: 2px solid #ffffff;
-            border-radius: 50%;
-            width: 14px !important;
-            height: 14px !important;
-            box-shadow: 0 0 10px #38bdf8;
-        }
-
-        /* --- TECHNICAL SPECIFICATION DRAWER --- */
-        .details-panel { 
-            position: fixed; top: 0; right: -100%; width: 100%; max-width: 360px; height: 100%; 
-            background: #091310; backdrop-filter: blur(30px);
-            transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1); 
-            z-index: 2000; border-left: 1px solid var(--glass-border);
-        }
-        .details-panel.active { right: 0; }
-        .spec-content { padding: 48px 24px; }
-        .spec-item { margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); padding-bottom: 12px; }
-
-        /* --- RENDERER & ANNOTATIONS --- */
-        model-viewer { 
-            width: 100vw; height: 100vh; background: var(--mg-bg); 
-            touch-action: pan-y;
-        }
-        .Hotspot { 
-            background: var(--mg-emerald); border-radius: 50%; width: 12px; height: 12px; 
-            border: 2px solid #ffffff; cursor: pointer; transition: 0.2s ease; 
-            box-shadow: 0 0 10px var(--mg-mint);
-        }
-        .Hotspot.hidden { opacity: 0; transform: scale(0); pointer-events: none; }
-        .HotspotAnnotation { 
-            background: rgba(11, 18, 16, 0.95); color: var(--text-main); 
-            padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 500;
-            position: absolute; transform: translate(14px, -50%); 
-            border: 1px solid var(--mg-emerald); white-space: nowrap; pointer-events: none;
-        }
-    </style>
+.leaflet-custom-hotspot {
+  background-color: rgba(255, 0, 0, 0.9);
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 12px rgba(255, 0, 0, 0.6);
+  transition: transform 0.2s ease;
+}
+.leaflet-custom-hotspot:active { transform: scale(1.1); background-color: var(--accent-secondary); }
+.hotspot-label {
+  background-color: var(--panel-bg);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  font-family: var(--font-stack);
+  font-weight: 600;
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  white-space: nowrap;
+}
+.leaflet-tooltip-bottom.hotspot-label::before { border-bottom-color: var(--panel-bg); }
+.modal {
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+.modal.hidden { display: none; }
+.modal-content {
+  background: var(--panel-bg);
+  width: 95%; max-width: 650px;
+  border-radius: 12px;
+  padding: 2.5rem 1rem 1.5rem;
+  position: relative;
+  border: 1px solid var(--border);
+  box-shadow: 0 24px 48px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.close-btn {
+  position: absolute; top: 5px; right: 15px;
+  background: none; border: none; font-size: 2rem;
+  color: var(--text-secondary); cursor: pointer; padding: 5px;
+}
+#simulator-title {
+  margin-top: 0; margin-bottom: 0.25rem;
+  font-weight: 600; font-size: 1.2rem;
+  color: var(--text-primary); text-align: center;
+}
+#simulator-info {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-top: 0;
+  margin-bottom: 1rem;
+  line-height: 1.4;
+  width: 100%;
+}
+model-viewer {
+  width: 100%; height: 50vh; min-height: 280px;
+  background-color: #ededed; outline: none; position: relative;
+  border-radius: 8px;
+}
+#fallback-image {
+  width: 100%; max-height: 50vh; min-height: 280px;
+  object-fit: cover; border-radius: 8px; display: none;
+  border: 1px solid var(--border);
+}
+.ar-trigger-btn {
+  background-color: var(--accent-primary);
+  color: #ffffff; border: none;
+  padding: 12px 24px; border-radius: 30px;
+  font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+  cursor: pointer; box-shadow: 0 4px 12px rgba(204, 0, 0, 0.4);
+  display: flex; align-items: center; gap: 8px;
+  z-index: 10;
+}
+.ar-trigger-btn:active { background-color: var(--accent-secondary); }
+.ar-unsupported {
+  display: none;
+  position: absolute; bottom: 20px;
+  background: rgba(0, 0, 0, 0.75); color: #fff;
+  padding: 6px 14px; border-radius: 20px; font-size: 0.75rem;
+}
+.progress-bar {
+  display: block; width: 50%; height: 8px; border-radius: 4px;
+  position: absolute; left: 25%; top: 50%; transform: translateY(-50%);
+  background-color: var(--border); border: 1px solid var(--text-secondary);
+  overflow: hidden; pointer-events: none;
+}
+.progress-bar.hide { visibility: hidden; transition: visibility 0.3s; }
+.update-bar { background-color: var(--accent-primary); width: 0%; height: 100%; transition: width 0.3s; }
+</style>
 </head>
 <body>
+<div id="loadingCurtain" class="loading-curtain">Loading Map...</div>
 
-<div id="start-screen">
-    <div class="radar-container">
-        <div class="radar-sweep"></div>
-        <div class="radar-center-node">GEOSPATIAL ANCHOR</div>
-    </div>
-    <div style="max-width:320px; font-size:12px; color:var(--text-dim); margin-bottom:28px; line-height:1.5;">
-        Mind Garden Spatial Engine. Initializing high-precision WGS84 coordinates and OpenStreetMap integration.
-    </div>
-    <button class="commence-btn" onclick="startApp()">Initialize Environment</button>
+<div class="status-bar">
+  <div>Fire Service College Interactive Map</div>
+  <div id="locationTrigger" style="display: none;"><span id="gpsStatus"></span></div>
 </div>
 
-<div class="app-overlay">
-    <div class="control-panel">
-        <div class="asset-info">
-            <div class="panel-label">Active Spatial Node</div>
-            <select id="model-select"></select>
-        </div>
-        <div class="button-group">
-            <button id="toggle-map" class="ui-btn primary">Map</button>
-            <button id="toggle-hotspots" class="ui-btn active">Hotspots</button>
-            <button onclick="document.getElementById('details-panel').classList.add('active')" class="ui-btn">Telemetry</button>
-        </div>
-    </div>
+<div class="map-wrapper">
+  <div id="map"></div>
 </div>
 
-<div class="sensor-bar">
-    <div class="sensor-chip">
-        <span style="color: var(--text-dim);">AZIMUTH</span>
-        <span><span id="heading-val">0</span>° <div id="compass" class="compass-disc"></div></span>
-    </div>
-    <div class="sensor-chip">
-        <span style="color: var(--text-dim);">RADIAL RANGE</span>
-        <span id="distance-val" style="color: var(--mg-mint); font-weight:600;">-- m</span>
-    </div>
+<div class="weather-data">
+  <div class="weather-item"><span class="weather-label">WIND</span><span id="wSpdDisplay" class="weather-val">--</span></div>
+  <div class="weather-item"><span class="weather-label">DIR</span><span id="wDirDisplay" class="weather-val">--</span></div>
+  <div class="weather-item"><span class="weather-label">TEMP</span><span id="tempDisplay" class="weather-val">--</span></div>
+  <div class="weather-item"><span class="weather-label">HUMID</span><span id="rhDisplay" class="weather-val">--</span></div>
 </div>
 
-<div id="proximity-alert">
-    <div>
-        <div style="font-size:9px; text-transform:uppercase; font-weight:700; color:var(--mg-mint); letter-spacing:0.5px;">Proximity Threshold Reached</div>
-        <div id="alert-title" style="font-weight:600; font-size:12px; color:var(--text-main); margin-top:2px;">Asset In Local Perimeter</div>
-    </div>
-    <button onclick="dismissAlert()" style="background:var(--mg-emerald); color:#ffffff; border:none; padding:6px 12px; border-radius:4px; font-weight:600; font-size:10px; cursor:pointer;">ACKNOWLEDGE</button>
+<div class="control-buttons">
+  <button id="btnLocation" class="control-btn">Location</button>
+  <button id="btnReset" class="control-btn">Reset</button>
 </div>
 
-<div class="ar-container">
-    <button id="ar-button" class="ar-btn">Launch Spatial AR</button>
+<div id="ar-modal" class="modal hidden">
+  <div class="modal-content">
+    <button class="close-btn" id="close-modal">&times;</button>
+    <h2 id="simulator-title">Simulator Name</h2>
+    <p id="simulator-info">Simulator detailed information.</p>
+    
+    <img id="fallback-image" src="" alt="Simulator Image Fallback" />
+    
+    <model-viewer 
+      id="active-model" 
+      src="" 
+      ios-src="" 
+      ar 
+      ar-modes="webxr scene-viewer quick-look" 
+      ar-scale="auto"
+      ar-placement="floor"
+      camera-controls 
+      touch-action="pan-y"
+      auto-rotate 
+      shadow-intensity="1.2"
+      shadow-softness="0.8"
+      exposure="1.0">
+      
+      <div class="progress-bar hide" slot="progress-bar">
+        <div class="update-bar"></div>
+      </div>
+      
+      <button slot="ar-button" class="ar-trigger-btn" id="ar-button">
+        Launch AR Experience
+      </button>
+
+      <div id="ar-unsupported-msg" class="ar-unsupported" slot="ar-failure">
+        AR unavailable on this device/browser
+      </div>
+    </model-viewer>
+    
+    <audio id="model-audio" style="display:none;"></audio>
+  </div>
 </div>
 
-<!-- LEAFLET OSM CONTAINER -->
-<div id="map-container">
-    <div class="map-header">
-        <button class="ui-btn primary" onclick="recenterMap()">Recenter</button>
-        <button class="ui-btn" onclick="toggleMap()">Close Map</button>
-    </div>
-    <div id="osm-map"></div>
-</div>
-
-<div id="details-panel" class="details-panel">
-    <div class="spec-content">
-        <h2 id="asset-title" style="color: var(--mg-mint); font-weight: 400; text-transform: uppercase; margin-bottom:24px; font-size: 1.15rem; letter-spacing:0.5px;">-</h2>
-        <div class="spec-item"><span class="panel-label">Anchor Zone</span><span id="spec-crew" style="display:block; margin-top:4px; font-size: 12px;">-</span></div>
-        <div class="spec-item"><span class="panel-label">Geographic Coordinates</span><span id="spec-base" style="display:block; margin-top:4px; font-size: 12px; font-variant-numeric: tabular-nums;">-</span></div>
-        <div class="spec-item"><span class="panel-label">Technical Overview</span><p id="spec-desc" style="font-size:12px; color:var(--text-dim); line-height:1.5; margin-top:6px;"></p></div>
-        <button onclick="document.getElementById('details-panel').classList.remove('active')" style="width:100%; background:rgba(255,255,255,0.06); color:var(--text-main); border:1px solid var(--glass-border); padding:10px; border-radius:6px; cursor:pointer; font-weight:600; text-transform:uppercase; font-size:11px; margin-top: 16px;">Close Panel</button>
-    </div>
-</div>
-
-<model-viewer 
-    id="main-viewer" 
-    ar 
-    ar-modes="webxr scene-viewer quick-look" 
-    ar-scale="auto"
-    ar-placement="floor"
-    camera-controls 
-    shadow-intensity="1.2" 
-    shadow-softness="0.8" 
-    tone-mapping="neutral" 
-    interaction-prompt="none">
-    <div slot="ar-button" style="display:none;"></div>
-</model-viewer>
-
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    // Inhibit double-tap zoom on application elements while maintaining Leaflet pinch/scroll zoom
-    document.addEventListener('dblclick', function(e) {
-        if (!e.target.closest('#osm-map')) {
-            e.preventDefault();
-        }
-    }, { passive: false });
+  const DOM = {
+    curtain: document.getElementById('loadingCurtain'), 
+    gpsStatus: document.getElementById('gpsStatus'), 
+    locationTrigger: document.getElementById('locationTrigger'), 
+    modal: document.getElementById('ar-modal'), 
+    closeModalBtn: document.getElementById('close-modal'),
+    modelViewer: document.getElementById('active-model'), 
+    fallbackImage: document.getElementById('fallback-image'),
+    simulatorTitle: document.getElementById('simulator-title'),
+    simulatorInfo: document.getElementById('simulator-info'),
+    wSpdDisplay: document.getElementById('wSpdDisplay'),
+    wDirDisplay: document.getElementById('wDirDisplay'),
+    tempDisplay: document.getElementById('tempDisplay'),
+    rhDisplay: document.getElementById('rhDisplay'),
+    btnLocation: document.getElementById('btnLocation'),
+    btnReset: document.getElementById('btnReset'),
+    updateBar: document.querySelector('.update-bar'),
+    audio: document.getElementById('model-audio')
+  };
 
-    const viewer = document.querySelector('#main-viewer');
-    const select = document.querySelector('#model-select');
-    const hotspotBtn = document.querySelector('#toggle-hotspots');
-    const mapBtn = document.querySelector('#toggle-map');
-    const arBtn = document.querySelector('#ar-button');
-    const compassEl = document.querySelector('#compass');
-    const headingVal = document.querySelector('#heading-val');
-    const distanceVal = document.querySelector('#distance-val');
-    const alertBox = document.querySelector('#proximity-alert');
-    const mapContainer = document.querySelector('#map-container');
+  let map, originLat = 51.9943, originLon = -1.6823;
+  
+  const simulators = [
+    { id: "sim-2", name: "Cat 10 Rig", info: "A380 Aviation Rescue and Fire Fighting simulation rig.", lat: 51.996011, lng: -1.683188, model_src: "models/rig.glb", ios_src: "models/rig.usdz", img_fallback: "images/rig.jpg", audio_src: "audio/rig.mp3" },
+    { id: "sim-3", name: "ARFF Rig C-17", info: "C17 Aviation Rescue and Fire Fighting simulation rig.", lat: 51.998301, lng: -1.678853, model_src: "models/arff.glb", ios_src: "models/arff.usdz", img_fallback: "images/arff.jpg", audio_src: "audio/arff.mp3" },
+    { id: "sim-4", name: "Merlin Sim", info: "Rotary-wing aircraft crash and rescue simulator.", lat: 51.996062, lng: -1.682645, model_src: "models/merlin.glb", ios_src: "models/merlin.usdz", img_fallback: "images/merlin.jpg", audio_src: "audio/merlin.mp3" },
+    { id: "sim-5", name: "Industrial A", info: "Large-scale industrial incident and hazmat scenario trainer.", lat: 51.99572358454232, lng: -1.677712924343045, model_src: "models/IndA.glb", ios_src: "models/IndA.usdz", img_fallback: "images/inda.jpg", audio_src: "audio/inda.mp3" },
+    { id: "sim-6", name: "Cessna", info: "Light aircraft emergency response simulator.", lat: 52.000157, lng: -1.678911, model_src: "models/cessna.glb", ios_src: "models/cessna.usdz", img_fallback: "images/cessna.jpg", audio_src: "audio/cessna.mp3" },
+    { id: "sim-7", name: "Tornado", info: "2 seat fast Jet.", lat: 51.998965, lng: -1.678473, model_src: "models/f3.glb", ios_src: "models/f3.usdz", img_fallback: "images/f3.jpg", audio_src: "audio/f3.mp3" },
+    { id: "sim-8", name: "Lynx helicopter", info: "light battlefield helicopter", lat: 52.000487, lng: -1.677733, model_src: "models/lynx.glb", ios_src: "models/lynx.usdz", img_fallback: "images/lynx.jpg", audio_src: "audio/lynx.mp3" },
+    { id: "sim-9", name: "Drill tower", info: "Main Drill tower", lat: 51.995679, lng: -1.678509, model_src: "models/mdt.glb", ios_src: "models/mdt.usdz", img_fallback: "images/mdt.jpg", audio_src: "audio/mdt.mp3" },
+    { id: "sim-10", name: "USAR Building", info: "Urban Search and Rescue", lat: 51.995794, lng: -1.674954, model_src: "models/usar.glb", ios_src: "models/usar.usdz", img_fallback: "images/usar.jpg", audio_src: "audio/usar.mp3" },
+    { id: "sim-11", name: "Gym", info: "Gym MONDAY-THURSDAY:06:15-21:00 FRIDAYS: 06:15-20:00 SATURDAY & SUNDAY:08:00-13:00", lat: 51.991110, lng: -1.676447, model_src: "models/gym.glb", ios_src: "models/gym.usdz", img_fallback: "images/gym.jpg", audio_src: "audio/gym.mp3" }
+  ];
 
-    const fleetData = [
-        {
-            "name": "Neural Monolith - Calibration Node",
-            "file": "mind_monolith",
-            "crew": "Cirencester Test Anchor",
-            "lat": 51.7118, 
-            "lng": -1.9702,
-            "description": "Primary geospatial calibration anchor deployed at 5 Tudor Road (GL7 1AZ). Benchmarks ground-plane tracking, spatial coordinate parity, and sensor fusion accuracy."
-        },
-        {
-            "name": "Biomorphic Core - Sanctuary Node Alpha",
-            "file": "mind_lotus",
-            "crew": "Regional Sector Alpha",
-            "lat": 51.7145, 
-            "lng": -1.9680,
-            "description": "Geometric vegetation asset designed to assess spatial occlusion algorithms and progressive WebXR surface mesh rendering."
-        },
-        {
-            "name": "Adaptive Root System - Secondary Anchor",
-            "file": "mind_bonsai",
-            "crew": "Regional Sector Beta",
-            "lat": 51.7090, 
-            "lng": -1.9750,
-            "description": "Low-frequency ambient feedback model used to confirm orientation matrix stability and localized drift mitigation."
-        }
-    ];
+  function initMap() {
+    map = L.map('map', { 
+      zoomControl: true, 
+      dragging: true, 
+      tap: false, 
+      scrollWheelZoom: true, 
+      touchZoom: true 
+    }).setView([originLat, originLon], 15);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+      maxZoom: 19 
+    }).addTo(map);
+    
+    renderHotspots();
+    
+    map.whenReady(() => {
+      setTimeout(() => map.invalidateSize(), 100);
+    });
+  }
 
-    const hotspotMap = {
-        "mind_monolith": [
-            { pos: "0m 1.2m 0m", norm: "0m 0m 1m", label: "Datum Baseline Ref" },
-            { pos: "0m 0.2m 0.3m", norm: "0m 1m 0m", label: "Ground Plane Anchor" }
-        ],
-        "mind_lotus": [
-            { pos: "0m 0.5m 0m", norm: "0m 1m 0m", label: "Resonance Apex" },
-            { pos: "0.2m 0.2m 0.2m", norm: "1m 0m 0m", label: "Perimeter Node" }
-        ],
-        "mind_bonsai": [
-            { pos: "0m 0.8m 0m", norm: "0m 1m 0m", label: "Structural Apex" },
-            { pos: "-0.2m 0.3m 0m", norm: "-1m 0m 0m", label: "Substrate Terminal" }
-        ]
-    };
+  function renderHotspots() {
+    const customIcon = L.divIcon({ className: 'leaflet-custom-hotspot', iconSize: [24, 24], iconAnchor: [12, 12] });
+    simulators.forEach(sim => {
+      const marker = L.marker([sim.lat, sim.lng], { icon: customIcon }).addTo(map);
+      marker.bindTooltip(sim.name, { permanent: true, direction: 'bottom', className: 'hotspot-label', offset: [0, 10] });
+      marker.on('click', (e) => {
+        L.DomEvent.stopPropagation(e);
+        openSimulator(sim);
+      });
+    });
+  }
 
-    let userCoords = null;
-    let selectedIdx = 0;
-    const PROXIMITY_THRESHOLD_METERS = 20;
-    let notifiedNodes = new Set();
-    let map = null;
-    let mapMarkers = [];
-    let userMarker = null;
+  function openSimulator(sim) {
+    DOM.simulatorTitle.textContent = sim.name;
+    DOM.simulatorInfo.textContent = sim.info || "Information pending.";
 
-    function initMap() {
-        const target = fleetData[selectedIdx];
-        map = L.map('osm-map', {
-            zoomControl: true,
-            attributionControl: false
-        }).setView([target.lat, target.lng], 16);
+    DOM.modelViewer.src = "";
+    DOM.modelViewer.iosSrc = "";
+    if (DOM.updateBar) DOM.updateBar.style.width = '0%';
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19
-        }).addTo(map);
-
-        const anchorIcon = L.divIcon({ className: 'custom-anchor-icon', iconSize: [14, 14] });
-
-        fleetData.forEach((item, idx) => {
-            const marker = L.marker([item.lat, item.lng], { icon: anchorIcon }).addTo(map);
-            marker.bindPopup(`<b>${item.name}</b><br>${item.lat.toFixed(4)}, ${item.lng.toFixed(4)}`);
-            marker.on('click', () => {
-                select.value = idx;
-                updateAsset(idx);
-            });
-            mapMarkers.push(marker);
-        });
+    if (sim.model_src && sim.model_src.trim() !== "") {
+      DOM.fallbackImage.style.display = "none";
+      DOM.modelViewer.style.display = "block";
+      
+      setTimeout(() => {
+        DOM.modelViewer.src = sim.model_src;
+        DOM.modelViewer.iosSrc = sim.ios_src || "";
+      }, 50);
+    } else {
+      DOM.modelViewer.style.display = "none";
+      DOM.fallbackImage.src = sim.img_fallback || "images/placeholder.jpg";
+      DOM.fallbackImage.style.display = "block";
     }
 
-    function toggleMap() {
-        const isActive = mapContainer.classList.toggle('active');
-        mapBtn.classList.toggle('active', isActive);
-        if (isActive) {
-            setTimeout(() => {
-                map.invalidateSize();
-                recenterMap();
-            }, 360);
-        }
+    if (sim.audio_src && sim.audio_src.trim() !== "") {
+      DOM.audio.src = sim.audio_src;
+      DOM.audio.play().catch(() => {});
+    } else {
+      DOM.audio.pause();
+      DOM.audio.src = "";
     }
 
-    function recenterMap() {
-        if (!map) return;
-        const target = fleetData[selectedIdx];
-        if (userCoords) {
-            const bounds = L.latLngBounds([
-                [userCoords.latitude, userCoords.longitude],
-                [target.lat, target.lng]
-            ]);
-            map.fitBounds(bounds, { padding: [50, 50], maxZoom: 17 });
-        } else {
-            map.setView([target.lat, target.lng], 16);
-        }
+    DOM.modal.classList.remove('hidden');
+  }
+
+  function closeModal() {
+    DOM.modal.classList.add('hidden');
+    DOM.modelViewer.src = "";
+    DOM.modelViewer.iosSrc = "";
+    DOM.fallbackImage.src = "";
+    DOM.audio.pause();
+    DOM.audio.currentTime = 0;
+    DOM.audio.src = "";
+  }
+
+  DOM.modelViewer.addEventListener('ar-status', (event) => {
+    if (event.detail.status === 'failed') {
+      const msg = document.getElementById('ar-unsupported-msg');
+      if (msg) {
+        msg.style.display = 'block';
+        setTimeout(() => { msg.style.display = 'none'; }, 3000);
+      }
     }
+  });
 
-    function calculateDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371e3;
-        const rad = Math.PI / 180;
-        const dLat = (lat2 - lat1) * rad;
-        const dLon = (lon2 - lon1) * rad;
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                  Math.cos(lat1 * rad) * Math.cos(lat2 * rad) *
-                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+  DOM.modelViewer.addEventListener('progress', (event) => {
+    const progressBar = DOM.modelViewer.querySelector('.progress-bar');
+    const updateBar = DOM.modelViewer.querySelector('.update-bar');
+    const progress = event.detail.totalProgress;
+    
+    if (progress === 1) {
+      progressBar.classList.add('hide');
+    } else {
+      progressBar.classList.remove('hide');
+      if (updateBar) updateBar.style.width = `${progress * 100}%`;
     }
+  });
 
-    function checkProximities() {
-        if (!userCoords) return;
-        const currentTarget = fleetData[selectedIdx];
-        const dist = calculateDistance(userCoords.latitude, userCoords.longitude, currentTarget.lat, currentTarget.lng);
-        
-        distanceVal.innerText = dist >= 1000 ? `${(dist / 1000).toFixed(2)} km` : `${Math.round(dist)} m`;
-
-        if (map) {
-            const userIcon = L.divIcon({ className: 'custom-user-icon', iconSize: [14, 14] });
-            if (!userMarker) {
-                userMarker = L.marker([userCoords.latitude, userCoords.longitude], { icon: userIcon }).addTo(map);
-                userMarker.bindPopup('Current Telemetry Origin');
-            } else {
-                userMarker.setLatLng([userCoords.latitude, userCoords.longitude]);
-            }
-        }
-
-        fleetData.forEach((item, idx) => {
-            const d = calculateDistance(userCoords.latitude, userCoords.longitude, item.lat, item.lng);
-            if (d <= PROXIMITY_THRESHOLD_METERS && !notifiedNodes.has(item.name)) {
-                notifiedNodes.add(item.name);
-                triggerProximityAlert(item, idx);
-            }
-        });
+  async function fetchWeather() {
+    try {
+      const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${originLat}&longitude=${originLon}&current=temperature_2m,wind_speed_10m,wind_direction_10m,relative_humidity_2m&wind_speed_unit=mph`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      DOM.tempDisplay.innerText = Math.round(data.current.temperature_2m) + '°C';
+      DOM.wSpdDisplay.innerText = Math.round(data.current.wind_speed_10m) + ' mph';
+      DOM.wDirDisplay.innerText = Math.round(data.current.wind_direction_10m) + '°';
+      DOM.rhDisplay.innerText = Math.round(data.current.relative_humidity_2m) + '%';
+    } catch {
+      DOM.tempDisplay.innerText = 'ERR';
+      DOM.wSpdDisplay.innerText = 'ERR';
+      DOM.wDirDisplay.innerText = 'ERR';
+      DOM.rhDisplay.innerText = 'ERR';
     }
+  }
 
-    function triggerProximityAlert(item, idx) {
-        document.getElementById('alert-title').innerText = `${item.name}`;
-        alertBox.classList.add('active');
-        if ('vibrate' in navigator) navigator.vibrate([80, 40, 80]);
-        playNotificationTone();
+  function detectLocation() {
+    if (DOM.gpsStatus) DOM.gpsStatus.innerText = "Detecting...";
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        map.setView([pos.coords.latitude, pos.coords.longitude], 15);
+      }, () => {});
     }
+  }
 
-    function dismissAlert() {
-        alertBox.classList.remove('active');
-    }
+  DOM.closeModalBtn.addEventListener('click', closeModal);
+  DOM.modal.addEventListener('click', e => { if (e.target === DOM.modal) closeModal(); });
 
-    function playNotificationTone() {
-        try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(440, ctx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
-            gain.gain.setValueAtTime(0.08, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start();
-            osc.stop(ctx.currentTime + 0.4);
-        } catch (e) {}
-    }
+  if (DOM.locationTrigger) DOM.locationTrigger.addEventListener('click', detectLocation);
+  DOM.btnLocation.addEventListener('click', detectLocation);
 
-    function handleOrientation(e) {
-        let heading = null;
-        if (e.webkitCompassHeading) {
-            heading = e.webkitCompassHeading;
-        } else if (e.alpha !== null) {
-            heading = 360 - e.alpha;
-        }
-        if (heading !== null) {
-            const deg = Math.round(heading);
-            headingVal.innerText = deg;
-            compassEl.style.transform = `rotate(${deg}deg)`;
-        }
-    }
-
-    function initSensors() {
-        if ('geolocation' in navigator) {
-            navigator.geolocation.watchPosition(
-                (pos) => {
-                    userCoords = pos.coords;
-                    checkProximities();
-                },
-                (err) => console.warn('Geospatial position query failure:', err.message),
-                { enableHighAccuracy: true, maximumAge: 0, timeout: 8000 }
-            );
-        }
-
-        if (window.DeviceOrientationEvent) {
-            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission()
-                    .then(state => { 
-                        if (state === 'granted') window.addEventListener('deviceorientation', handleOrientation); 
-                    })
-                    .catch(console.error);
-            } else {
-                window.addEventListener('deviceorientation', handleOrientation);
-            }
-        }
-    }
-
-    function startApp() {
-        initSensors();
-        initMap();
-        const screen = document.getElementById('start-screen');
-        screen.style.opacity = '0';
-        screen.style.pointerEvents = 'none';
-        setTimeout(() => screen.style.display = 'none', 600);
-    }
-
-    function init() {
-        select.innerHTML = fleetData.map((m, i) => `<option value="${i}">${m.name.toUpperCase()}</option>`).join('');
-        updateAsset(0);
-    }
-
-    function updateAsset(idx) {
-        selectedIdx = idx;
-        const asset = fleetData[idx];
-        viewer.src = `models/${asset.file}.glb`;
-        
-        document.getElementById('asset-title').innerText = asset.name;
-        document.getElementById('spec-crew').innerText = asset.crew;
-        document.getElementById('spec-base').innerText = `${asset.lat.toFixed(4)}° N, ${Math.abs(asset.lng).toFixed(4)}° W`;
-        document.getElementById('spec-desc').innerText = asset.description;
-
-        viewer.querySelectorAll('.Hotspot').forEach(h => h.remove());
-
-        viewer.addEventListener('load', () => {
-            const points = hotspotMap[asset.file];
-            if (points) {
-                points.forEach((p, i) => {
-                    const b = document.createElement('button');
-                    b.className = `Hotspot ${hotspotBtn.classList.contains('active') ? '' : 'hidden'}`;
-                    b.slot = `hotspot-${i}`;
-                    b.setAttribute('data-position', p.pos);
-                    b.setAttribute('data-normal', p.norm);
-                    b.innerHTML = `<div class="HotspotAnnotation">${p.label}</div>`;
-                    b.onclick = () => {
-                        viewer.cameraTarget = p.pos;
-                        viewer.cameraOrbit = "45deg 75deg 2.5m";
-                    };
-                    viewer.appendChild(b);
-                });
-            }
-        }, { once: true });
-
-        if (map && mapContainer.classList.contains('active')) {
-            map.panTo([asset.lat, asset.lng]);
-        }
-
-        checkProximities();
-    }
-
-    hotspotBtn.onclick = () => {
-        const isActive = hotspotBtn.classList.toggle('active');
-        viewer.querySelectorAll('.Hotspot').forEach(h => {
-            isActive ? h.classList.remove('hidden') : h.classList.add('hidden');
-        });
-    };
-
-    mapBtn.onclick = toggleMap;
-    arBtn.onclick = () => viewer.activateAR();
-    select.onchange = (e) => updateAsset(parseInt(e.target.value, 10));
-    window.addEventListener('load', init);
+  DOM.btnReset.addEventListener('click', () => {
+    map.setView([originLat, originLon], 15);
+  });
+  
+  window.onload = async () => { 
+    initMap(); 
+    await fetchWeather();
+    DOM.curtain.style.display = 'none'; 
+  };
 </script>
-
 </body>
 </html>
